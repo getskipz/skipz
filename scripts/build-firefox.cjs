@@ -9,7 +9,9 @@ fs.cpSync(src, out, { recursive: true });
 const m = JSON.parse(fs.readFileSync(path.join(src, 'manifest.json'), 'utf8'));
 const MOBILE = 'https://m.youtube.com/*';
 m.background = { scripts: ['background.js'], type: 'module' };
-m.permissions = (m.permissions || []).filter((p) => p !== 'alarms');
+m.permissions = (m.permissions || []).filter((p) => p !== 'alarms' && p !== 'offscreen'); // Firefox has no hidden page for the listening models, so that part is left out of this version
+for (const p of ['ears.html', 'ort', 'needle']) fs.rmSync(path.join(out, p), { recursive: true, force: true });
+for (const f of fs.readdirSync(path.join(out, 'assets'))) if (/^(ears|listen\.worker|worker)-|\.wasm$/.test(f)) fs.rmSync(path.join(out, 'assets', f), { force: true });
 m.host_permissions = [...new Set([...(m.host_permissions || []), MOBILE])];
 m.content_scripts = (m.content_scripts || []).map((c) => ({ ...c, matches: [...new Set([...(c.matches || []), MOBILE])] }));
 m.browser_specific_settings = {

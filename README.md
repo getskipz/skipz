@@ -1,6 +1,6 @@
 # Skipz
 
-Skipz finds the sponsor part of a YouTube video, names the brand, and skips it for you. It asks first, unless you tell it not to.
+Skipz finds the sponsor part of a YouTube video and skips it for you. It asks first, unless you tell it not to.
 
 It works on videos nobody has marked yet, including ones posted an hour ago. It reads what YouTube already shows (the paid-promotion label, the description, the chapters and the video's own captions) on your computer. Nothing leaves your browser. There is no account, no key and no server.
 
@@ -10,7 +10,7 @@ It works on videos nobody has marked yet, including ones posted an hour ago. It 
 
 ## What you get
 
-- **A yellow mark on the timeline** over the sponsor part, with the brand's name.
+- **A yellow mark on the timeline** over the sponsor part.
 - **A prompt a moment before it starts:** "Skip it?" with two big buttons. Undo is one press.
 - **Three modes in the toolbar popup:** Ask me before skipping (the default), Don't ask me before skipping (it skips by itself), Don't skip.
 
@@ -22,12 +22,13 @@ Skipz combines four signs and marks a sponsor only when it is sure enough:
 2. Sponsor lines and links in the description.
 3. Chapters named after a brand.
 4. Spoken ad reads in the video's captions ("this video is sponsored by …", a deal code, "link in the description").
+5. No captions? If you agree, Skipz listens to the video on your computer with two small speech models and catches the sponsor read as it starts. It can then skip the rest of the read, one short jump at a time, and Undo takes you back.
 
 The rules are plain text patterns and a few thresholds. You can read them in [`src/detector/lib/sponsor/`](src/detector/lib/sponsor/). [How it works](docs/HOW-IT-WORKS.md) walks through one video.
 
 ## Privacy
 
-Skipz asks Chrome for three things: `storage` (your mode and counters), `scripting` (to read the page you have open) and access to `youtube.com`. It sends nothing anywhere. [Details](docs/PRIVACY.md).
+Skipz asks Chrome for four things: `storage` (your mode and counters), `scripting` (to read the page you have open), `offscreen` (a hidden page that runs the listening models) and access to `youtube.com`. It sends nothing about you or what you watch anywhere. [Details](docs/PRIVACY.md).
 
 ## Install
 

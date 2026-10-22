@@ -1,12 +1,13 @@
 {
   "manifest_version": 3,
   "name": "Skipz",
-  "version": "0.2.2",
-  "version_name": "0.2.2 beta",
+  "version": "0.3.0",
+  "version_name": "0.3.0 beta",
   "description": "Marks sponsor segments on YouTube and skips them for you. Asks first by default.",
   "permissions": [
     "storage",
-    "scripting"
+    "scripting",
+    "offscreen"
   ],
   "host_permissions": [
     "https://www.youtube.com/*",
@@ -42,5 +43,8 @@
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
   }
 }

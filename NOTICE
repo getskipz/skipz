@@ -2,4 +2,13 @@ Skipz
 Copyright 2026 Yx
 
 This product includes the Skipz detector (src/detector), which is part of the same work and under the same licence.
-No other third-party code is bundled in the extension.
+
+The listening feature uses these open-source components, each under its own licence:
+- Needle (Cactus Compute), model and runtime in public/needle: Apache-2.0
+- Moonshine tiny (Useful Sensors), ONNX build onnx-community/moonshine-tiny-ONNX, downloaded once on request: MIT
+- Whistle (Cactus Compute), model downloaded once on request: Apache-2.0
+- cactus-needle, the engine that runs Whistle: Apache-2.0
+- Transformers.js (@huggingface/transformers): Apache-2.0
+- ONNX Runtime Web, files in public/ort: MIT
+
+Skipz is not affiliated with or endorsed by YouTube, Google or Hugging Face.
