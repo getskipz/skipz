@@ -3,7 +3,7 @@
   "name": "Skipz",
   "version": "0.2.0",
   "version_name": "0.2.0 beta",
-  "description": "Marks sponsor segments on YouTube and asks before you skip them.",
+  "description": "Marks sponsor segments on YouTube and skips them for you. Asks first by default.",
   "permissions": [
     "storage",
     "scripting"

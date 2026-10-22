@@ -12,6 +12,8 @@ export const NEEDED = { startWithin3s: 0.8, brandRight: 0.85 } as const;
 export type Measured = { startWithin3s: number | null; brandRight: number | null; wrongSkipsGrowing: boolean | null; asOf: string };
 export const MEASURED: Measured = { startWithin3s: 0.49, brandRight: 0.77, wrongSkipsGrowing: null, asOf: '2026-10-12' }; // wrong skips: not measured yet, so the lock stays
 
+/** The maintainer opened the first lock himself on 2026-10-22 ("Default: Ask me before skip. Secondary: Don't ask me before skip. Either way it skips unless set to don't skip"), knowing the numbers above are below the bar. Every skip shows Undo. Set to false to bring the lock back. */
+export const MAINTAINER_UNLOCKED = true;
 export type SkipGate = { open: boolean; missing: ('start' | 'brand' | 'wrong')[] };
 export function skipGate(m: Measured = MEASURED): SkipGate {
   const missing: SkipGate['missing'] = [];
@@ -33,4 +35,4 @@ export function backfillGate(a: { indexUrl: string; agreed: string | null; lookB
 
 export type Mode = 'off' | 'ask' | 'skip';
 /** The mode that is really used: "skip" falls back to "ask" while the lock is shut, whatever was stored. */
-export const effectiveMode = (mode: Mode, m: Measured = MEASURED): Mode => (mode === 'skip' && !skipGate(m).open ? 'ask' : mode);
+export const effectiveMode = (mode: Mode, m: Measured = MEASURED, unlocked: boolean = MAINTAINER_UNLOCKED): Mode => (mode === 'skip' && !unlocked && !skipGate(m).open ? 'ask' : mode);

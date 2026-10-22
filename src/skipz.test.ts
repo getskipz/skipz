@@ -13,8 +13,9 @@ describe('the skip lock', () => {
   });
   it('treats "wrong skips not measured" as not safe', () => expect(skipGate({ ...ok, wrongSkipsGrowing: null }).missing).toEqual(['wrong']));
   it('turns a stored "skip" back into "ask" while it is shut', () => {
-    expect(effectiveMode('skip')).toBe('ask');
-    expect(effectiveMode('skip', ok)).toBe('skip');
+    expect(effectiveMode('skip', undefined, false)).toBe('ask');
+    expect(effectiveMode('skip', ok, false)).toBe('skip');
+    expect(effectiveMode('skip')).toBe('skip'); // the maintainer opened the lock on 2026-10-22
     expect(effectiveMode('off')).toBe('off');
   });
 });

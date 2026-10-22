@@ -1,16 +1,18 @@
 # Skipz
 
-Skipz finds the sponsor part of a YouTube video, names the brand, and asks before you skip it.
+Skipz finds the sponsor part of a YouTube video, names the brand, and skips it for you. It asks first, unless you tell it not to.
 
 It works on videos nobody has marked yet, including ones posted an hour ago. It reads what YouTube already shows (the paid-promotion label, the description, the chapters and the video's own captions) on your computer. Nothing leaves your browser. There is no account, no key and no server.
 
-> **Status: beta.** Skipz can miss a sponsor or mark the wrong stretch. It only ever asks. Skipping by itself stays switched off until the numbers say it is safe.
+> **Status: beta.** Skipz can miss a sponsor or mark the wrong stretch. It asks before skipping unless you switch that off, and Undo is always one tap. Spotted a mistake? Open an issue: that is how it gets better.
+
+![Skipz marking a sponsor, asking, skipping and undoing, on a stand-in video page](docs/demo.gif)
 
 ## What you get
 
 - **A yellow mark on the timeline** over the sponsor part, with the brand's name.
 - **A prompt a moment before it starts:** "Skip it?" with two big buttons. Undo is one press.
-- **Three modes in the toolbar popup:** Ask me, Skip by itself (locked for now), Off.
+- **Three modes in the toolbar popup:** Ask me before skipping (the default), Don't ask me before skipping (it skips by itself), Don't skip.
 
 ## How it decides
 

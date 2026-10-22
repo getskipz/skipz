@@ -16,7 +16,7 @@ const today = () => new Date().toISOString().slice(0, 10);
 function agreeScreen() {
   app.replaceChildren(
     el('h1', {}, 'Skipz'),
-    el('p', {}, 'Skipz marks sponsor segments on YouTube and asks before you skip them.'),
+    el('p', {}, 'Skipz marks sponsor segments on YouTube and skips them for you. It asks first, unless you tell it not to.'),
     el('p', { class: 'muted' }, 'When Skipz finds a sponsor, it adds the brand and the time to a shared list that everyone’s Skipz builds together, so others can skip it too. It never shares who you are or what else you watch.'),
     el('button', { class: 'go', type: 'button', onclick: async () => { await saveSettings({ agreed: today() }); void render(); } }, 'I agree'),
     el('p', { class: 'muted' }, 'Not for you? Remove Skipz on Chrome’s extensions page.'),
@@ -36,18 +36,17 @@ async function render() {
   const gate = skipGate();
   const pick = (m: Mode) => { void saveSettings({ mode: m }).then(render); };
   const now = effectiveMode(s.mode);
-  const lock = el('div', {}, el('span', {}, 'Coming soon')); // no numbers about how accurate it is yet: the lock stays, the screen only says it is coming (public wording, maintainer 2026-10-15)
   app.replaceChildren(
     el('h1', {}, 'Skipz', el('small', {}, now === 'off' ? 'Off' : 'On')),
     el('div', { class: 'modes' },
-      choice('ask', now, 'Ask me', 'Marks the sponsor, then asks: Skip it?', pick),
-      choice('skip', now, 'Skip by itself', gate.open ? 'Skips the sponsor and lets you undo' : '', pick, gate.open ? undefined : lock),
-      choice('off', now, 'Off', 'Skipz does nothing', pick),
+      choice('ask', now, 'Ask me before skipping', 'Marks the sponsor, then asks: Skip it?', pick),
+      choice('skip', now, 'Don’t ask me before skipping', 'Skips the sponsor by itself. Undo is one tap.', pick),
+      choice('off', now, 'Don’t skip', 'Skipz does nothing', pick),
     ),
     el('div', { class: 'nums' }, ...(['checked', 'marked', 'skipped'] as (keyof Stats)[]).map((k) => el('div', {}, el('b', {}, String(stats[k])), el('span', {}, k === 'checked' ? 'looked at' : k === 'marked' ? 'marked' : 'skipped')))),
     el('p', { class: 'muted' }, 'Skipz reads the video’s own captions and description on your computer. Nothing is sent anywhere.'),
     el('button', { class: 'link', type: 'button', onclick: async (e: Event) => { await navigator.clipboard.writeText(JSON.stringify({ version: chrome.runtime.getManifest().version, settings: s, stats, skipLockMissing: gate.missing, indexSet: !!INDEX_URL }, null, 2)); (e.target as HTMLElement).textContent = 'Copied'; } }, 'Copy info for support'),
-    el('p', { class: 'fine' }, 'Skipz isn’t perfect. It can miss a sponsor or mark the wrong stretch, which is why it always asks first. Spot a mistake? Tell us at github.com/getskipz/skipz and you help everyone.'),
+    el('p', { class: 'fine' }, 'Skipz isn’t perfect. It can miss a sponsor or mark the wrong stretch, so Undo is always one tap. Spot a mistake? Tell us at github.com/getskipz/skipz and you help everyone.'),
   );
 }
 void render();
