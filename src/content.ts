@@ -123,10 +123,13 @@ function tick() {
 }
 
 let current: string | null = null;
-async function open() {
+let retryTimer = 0;
+let noted: string | null = null; // the video the "found a sponsor, not where" note was shown for
+async function open(again = false) {
   const id = idOf();
-  if (id === current) return;
-  clear();
+  if (id === current && !again) return;
+  window.clearTimeout(retryTimer);
+  if (!again) clear();
   current = id;
   if (!id) return;
   style();
@@ -135,6 +138,8 @@ async function open() {
     const a: Answer | undefined = await chrome.runtime.sendMessage(msg);
     if (idOf() !== id || !a) return; // the person moved on
     mode = a.mode; mark = a.mark; bursts = a.mark ? burstsOfMark(a.mark) : [];
+    if (a.retry) retryTimer = window.setTimeout(() => { if (idOf() === id) void open(true); }, 95000); // the first reading was incomplete: look again in a while
+    if (a.found && !a.mark && noted !== id && mode !== 'off') { noted = id; show((c) => { words(c, a.found!, ' sponsor found. Skipz can’t tell where it starts.'); c.append(button('OK', 'stay', () => { chip?.remove(); chip = null; })); }, 9000); }
     const v = video();
     if (v && isFinite(v.duration) && v.duration > 0) draw(); // the length may not be known yet (it arrives a moment after the page opens): then draw when it is
     else v?.addEventListener('durationchange', draw, { once: true });
