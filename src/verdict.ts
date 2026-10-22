@@ -19,6 +19,28 @@ export function verdictOf(page: VideoPage, transcript?: ItTranscript | null, nee
   return combine(scrubOwnBrand([...first, byChapters(v.chapters, brands, v.lengthSeconds), byTranscript(read, brands), ...(needle ? [byNeedle(needle)] : [])], own));
 }
 
+/**
+ * An INTEGRATED sponsor (2026-10-22, YCImaging's iPhone video, "Sponsored By SmallRig"): the creator uses the sponsor's gear through the video and plugs it, with no spoken "sponsored by" read for the detector to find.
+ * When the label and description make the sponsor certain but no read was found, the stretches where the creator talks about that brand are the sponsored part:
+ * mentions less than GAP seconds apart make one stretch; a stretch needs two mentions, or one that is plainly a plug ("check out ...").
+ */
+export type Line = { t: number; text: string };
+const GAP = 75; // seconds between two mentions that still belong to one stretch
+const squash = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+const PLUG = /\b(check (?:them |it |this |that |out )?|link|grab|get yours|use code|buy|pick up|head over|go to)\b/i;
+export function brandStretches(lines: Line[], brand: string): Burst[] {
+  const b = squash(brand);
+  if (b.length < 4) return [];
+  const at = lines.map((l, i) => (squash(l.text).includes(b) || squash(l.text + ' ' + (lines[i + 1]?.text ?? '')).includes(b) && !squash(lines[i + 1]?.text ?? '').includes(b) ? i : -1)).filter((i) => i >= 0);
+  const out: { first: number; last: number; n: number }[] = [];
+  for (const i of at) {
+    const c = out[out.length - 1];
+    if (c && lines[i].t - lines[c.last].t <= GAP) { c.last = i; c.n++; } else out.push({ first: i, last: i, n: 1 });
+  }
+  const real = out.filter((c) => c.n >= 2 || PLUG.test(lines[c.first].text + ' ' + (lines[c.first + 1]?.text ?? '')));
+  return real.map((c) => ({ start: lines[c.first].t, end: (lines[c.last + 1]?.t ?? lines[c.last].t + 5) + 4 }));
+}
+
 /** What Skipz shows on the player: a brand and a time range, only when it is sure enough to point at one. */
 export type Burst = { start: number; end: number };
 export type Mark = { videoId: string; brand: string; start: number; end: number; confidence: number; from: 'index' | 'page' | 'heard'; live?: boolean; more?: Burst[] }; // start/end: the main burst; more: the others (a short plug up front, say)

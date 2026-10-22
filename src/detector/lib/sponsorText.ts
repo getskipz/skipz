@@ -10,7 +10,7 @@
 // change: every channel built with an older version rebuilds once the next time it is opened (maintainer, 2026-10-02:
 // "Yes for rules"), so a fix reaches channels built before it. 1 = Oct 2 (capital "Sponsored by", sites stop at "?",
 // affiliate middlemen, label-only names, ad times from chapters).
-export const SPONSOR_RULES = 6; // 6 = Oct 14 (an app name inside quotation marks and a link typed without https are read: an app ad line, The Orthodox Muslim 2.0); 5 = Oct 10 (a demo / "get your ... today" / start-free line with an outside link is an ad line; the brand is taken from the written word when it starts the address's name); 4 = Oct 9 (door detection: each sponsored line's link is read for a network, referral tag, program page or code); 3 = Oct 5 (ad signals: "Paid partnership with X", own-course and affiliate lines are not sponsors)
+export const SPONSOR_RULES = 7; // 7 = Oct 22 ("Sponsored By X" with a capital B counts: YCImaging / SmallRig); 6 = Oct 14 (an app name inside quotation marks and a link typed without https are read: an app ad line, The Orthodox Muslim 2.0); 5 = Oct 10 (a demo / "get your ... today" / start-free line with an outside link is an ad line; the brand is taken from the written word when it starts the address's name); 4 = Oct 9 (door detection: each sponsored line's link is read for a network, referral tag, program page or code); 3 = Oct 5 (ad signals: "Paid partnership with X", own-course and affiliate lines are not sponsors)
 
 import { classifyAd } from './sponsor/signals';
 import { OWN_HOSTS, CODE, doorOfLine, doorWord } from './door';
@@ -20,12 +20,12 @@ export type TextSponsor = { brand: string; line: string; how: 'said' | 'code' | 
 // The words may start a sentence ("Sponsored by Wispr Flow!", HowToMen, maintainer 2026-10-01: missed because only a
 // lowercase "sponsored by" matched) or be in capitals; the brand itself must still start with a capital.
 const SAID = [
-  /\b(?:[Ss]ponsored|SPONSORED)\s+(?:by|BY)\s+([A-Z][\w&'-]*(?:\s+[A-Z][\w&'-]*){0,2})/,
+  /\b(?:[Ss]ponsored|SPONSORED)\s+(?:[Bb][Yy])\s+([A-Z][\w&'-]*(?:\s+[A-Z][\w&'-]*){0,2})/,
   /\bthanks? (?:you )?to\s+([A-Z][\w&'-]*(?:\s+[A-Z][\w&'-]*){0,2})\s+for\s+(?:sponsoring|supporting|partnering)/i,
   /\b(?:[Ii]n )?(?:[Pp]artnership|PARTNERSHIP)\s+(?:with|WITH)\s+([A-Z][\w&'-]*(?:\s+[A-Z][\w&'-]*){0,2})/,
   /\b(?:[Bb]rought|BROUGHT)\s+(?:to you by|TO YOU BY)\s+([A-Z][\w&'-]*(?:\s+[A-Z][\w&'-]*){0,2})/,
   // "Presented by Zapier: https://zapier.com/" (The Next New Thing, maintainer's screenshot 2026-10-04), "Supported by X".
-  /\b(?:[Pp]resented|PRESENTED|[Ss]upported|SUPPORTED|[Mm]ade possible|MADE POSSIBLE)\s+(?:by|BY)\s+([A-Z][\w&'-]*(?:\s+[A-Z][\w&'-]*){0,2})/,
+  /\b(?:[Pp]resented|PRESENTED|[Ss]upported|SUPPORTED|[Mm]ade possible|MADE POSSIBLE)\s+(?:[Bb][Yy])\s+([A-Z][\w&'-]*(?:\s+[A-Z][\w&'-]*){0,2})/,
   // "Paid partnership with Ridge" (the ad-signal list, maintainer 2026-10-05).
   /\b(?:[Pp]aid\s+(?:[Pp]artnership|[Pp]romotion)|PAID\s+(?:PARTNERSHIP|PROMOTION))\s+(?:with|WITH|for|FOR|from|FROM)\s+([A-Z][\w&'-]*(?:\s+[A-Z][\w&'-]*){0,2})/,
 ];

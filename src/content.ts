@@ -289,7 +289,7 @@ async function open(again = false) {
     const v = video();
     if (v && isFinite(v.duration) && v.duration > 0) draw(); // the length may not be known yet (it arrives a moment after the page opens): then draw when it is
     else v?.addEventListener('durationchange', draw, { once: true });
-  } catch { /* the extension was reloaded: the next page load starts fresh */ }
+  } catch (e) { trail({ video: id, error: String((e as Error)?.message ?? e).slice(0, 200) }); /* usually: the extension was reloaded, the next page load starts fresh */ }
 }
 
 document.addEventListener('yt-navigate-finish', () => { current = null; void open(); });

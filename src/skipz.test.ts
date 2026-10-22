@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { skipGate, effectiveMode, NEEDED } from './gate';
-import { markFrom, verdictOf, burstsOfMark } from './verdict';
+import { markFrom, verdictOf, burstsOfMark, brandStretches } from './verdict';
 
 const ok = { startWithin3s: 0.85, brandRight: 0.9, wrongSkipsGrowing: false as boolean | null, asOf: 'x' };
 
@@ -72,4 +72,19 @@ describe("YouTube's own captions join the vote (no key)", () => {
     expect(v.sponsored).toBe(false);
   });
   it('says nothing for a video with no captions', () => expect(verdictOf(page as never, { state: 'none' }).sponsored).toBe(false));
+});
+
+describe('an integrated sponsor (YCImaging, "Sponsored By SmallRig", 2026-10-22)', () => {
+  // The real lines that mention the brand in that video (captions as YouTube wrote them); the creator uses the gear through the video and plugs it at the end.
+  const lines = [[74, 'brains of this all is the Creator Kit by'], [76, "SmallRig for the iPhone 18 Pro. It's"], [79, 'essentially this very minimal cage'], [144, 'then the next accessory I have connected'], [146, 'to this USB-C hub is the SmallRig power'], [148, 'bank. This battery is tight.'], [160, 'this uh creator kit using this magic arm'], [162, 'from SmallRig also. I\'m able to pivot'], [184, 'mounting system for this variable ND'], [186, 'filter, which is also by SmallRig. And I'], [209, 'entire setup, I got the wireless'], [211, 'SmallRig monitor. This is just to help'], [213, 'me monitor myself wirelessly from the'], [582, "I love Huckberry, it's one of my"], [1708, 'accessories to your iPhone, definitely'], [1710, 'check out this Creator Kit by SmallRig.'], [1713, 'Just the brains of this Creator Kit, the']].map(([t, text]) => ({ t: t as number, text: text as string }));
+  it('marks the stretch where the creator talks about the brand, and the closing plug', () => {
+    const s = brandStretches(lines, 'SmallRig');
+    expect(s[0]).toEqual({ start: 76, end: 217 }); // 76 (name split over a line break) .. the last mention at 211, a line later, plus 4
+    expect(s.length).toBe(2);
+    expect(s[1].start).toBe(1710); // a single mention counts when it is plainly a plug ("check out")
+  });
+  it('does not mark a brand named once in passing', () => {
+    expect(brandStretches([{ t: 10, text: 'I like Acme a lot' }, { t: 400, text: 'and that is all' }], 'Acme')).toEqual([]);
+    expect(brandStretches(lines, 'Hi')).toEqual([]); // a very short name is never searched for
+  });
 });

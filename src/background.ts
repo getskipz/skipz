@@ -8,7 +8,7 @@ import { needleCandidates } from '@detector/lib/ai/needle';
 import type { NeedleRead } from '@detector/lib/ai/needle';
 import { effectiveMode } from './gate';
 import { burstsOf } from '@detector/lib/sponsor/check';
-import { verdictOf, markFrom, type Mark } from './verdict';
+import { verdictOf, markFrom, brandStretches, type Mark } from './verdict';
 import { askIndex, sendFinding, INDEX_URL } from './sharedList';
 import { isLocalCopy, readBuildId } from '@detector/lib/autoUpdate';
 
@@ -22,6 +22,7 @@ export type Answer = { debug?: Debug; mark: Mark | null; mode: 'off' | 'ask' | '
 // This session's answers, so a video is read once. An INCOMPLETE answer (no captions read, or a sponsor found without times) is kept only for RETRY_AFTER and tried again, up to TRIES times:
 // the first try can be too early (a video 43 minutes old may have no captions yet), and one refusal must not decide a video for good (2026-10-22, the Fireship video).
 const EARS = typeof chrome.offscreen?.createDocument === 'function'; // Firefox has no such page: there Skipz reads captions and descriptions only
+const ANSWER_WITHIN = 20000;
 const RETRY_AFTER = 12000, TRIES = 4; // short: this runs on the video the person has just opened
 // How long each call into the page took (which step is slow on a busy page), kept for the diagnostic trail.
 const calls: string[] = [];
@@ -63,12 +64,17 @@ async function check(tabId: number, ask: Ask): Promise<Answer> {
   const named = [...new Set(v.votes.map((x) => x.brand).filter((x): x is string => !!x))];
   const noCaptions = captions.state !== 'ok';
   const more = burstsOf(v).filter((b) => !b.main && b.end !== null).map((b) => ({ start: b.start, end: b.end! })); // every other burst the reading found
-  const mark = v.sponsored ? markFrom(ask.videoId, { ...v, more }, 'page') : null;
+  let found = { ...v, more } as typeof v & { more: { start: number; end: number }[] };
+  if (v.sponsored && (v.start === null || v.end === null) && v.brand && captions.state === 'ok') { // sure there is a sponsor, but no spoken read found: an integrated sponsor, marked where the creator talks about the brand
+    const s = brandStretches(captions.lines, v.brand).sort((a, b) => (b.end - b.start) - (a.end - a.start));
+    if (s.length) found = { ...v, start: s[0].start, end: s[0].end, more: s.slice(1).sort((a, b) => a.start - b.start) };
+  }
+  const mark = v.sponsored ? markFrom(ask.videoId, found, 'page') : null;
   const tries = (prev?.tries ?? 0) + 1;
   const incomplete = captions.state !== 'ok' || (v.sponsored && !mark);
   const retryAt = incomplete && !mark && tries < TRIES ? Date.now() + RETRY_AFTER : null;
-  const found = v.sponsored && !mark ? (v.brand ?? 'A sponsor') : undefined;
-  done.set(ask.videoId, { mark, found, retryAt, tries, noCaptions, known: named });
+  const note = v.sponsored && !mark ? (v.brand ?? 'A sponsor') : undefined;
+  done.set(ask.videoId, { mark, found: note, retryAt, tries, noCaptions, known: named });
   if (mark && !prev?.mark) void bump('marked');
   void chrome.storage.local.set({ lastCheck: { videoId: ask.videoId, pageMs: tPage, captionsMs: tCaps, totalMs: Date.now() - t0, captions: captions.state, sponsored: v.sponsored, marked: !!mark, at: new Date().toISOString() } }).catch(() => {}); // for "Copy info for support": where the time went
   if (needleWanted) void (async () => {
@@ -82,7 +88,7 @@ async function check(tabId: number, ask: Ask): Promise<Answer> {
     if (r === 'sent') void bump('shared'); else if (r === 'later') sentToday.delete(ask.videoId);
   }
   const debug: Debug = { calls: calls.slice(), pingMs: pinged, pageMs: tPage, captionsMs: tCaps, totalMs: Date.now() - t0, page: 'video', captions: captions.state === 'ok' ? 'ok ' + captions.lines.length + ' lines' : captions.state + (captions.state === 'trouble' ? ': ' + captions.why : ''), sponsored: v.sponsored, conf: Math.round(v.confidence * 100), start: v.start, end: v.end, votes: v.votes.map((x) => x.method + ':' + x.said + ':' + Math.round(x.score * 100)) };
-  return { mark, mode, found, retry: retryAt !== null, noCaptions, listen: EARS ? s.listen : 'no', known: named, debug };
+  return { mark, mode, found: note, retry: retryAt !== null, noCaptions, listen: EARS ? s.listen : 'no', known: named, debug };
 }
 
 chrome.runtime.onMessage.addListener((msg: Ask | { type: 'stat'; key: 'asked' | 'skipped' | 'kept' } | { type: 'listen-open' } | { type: 'listen-choice'; yes: boolean }, sender, reply) => {
@@ -91,7 +97,8 @@ chrome.runtime.onMessage.addListener((msg: Ask | { type: 'stat'; key: 'asked' | 
   if (msg.type === 'listen-choice') { saveSettings({ listen: msg.yes ? 'yes' : 'no' }).then(() => reply({ ok: true })); return true; }
   const tabId = sender.tab?.id;
   if (msg.type !== 'check' || tabId === undefined) return false;
-  check(tabId, msg).then(reply, (e) => reply({ mark: null, mode: 'ask', retry: true, debug: { error: String((e as Error)?.stack ?? e).slice(0, 300) } } satisfies Answer)); // a failure is no longer silent: the page shows it and asks again
+  // The page is never left waiting: after ANSWER_WITHIN the check answers "not yet" (the page asks again) and says which step was still running.
+  Promise.race([check(tabId, msg), new Promise<Answer>((r) => setTimeout(() => r({ mark: null, mode: 'ask', retry: true, debug: { error: 'no answer after ' + ANSWER_WITHIN / 1000 + ' s', calls: calls.slice(-8) } }), ANSWER_WITHIN))]).then(reply, (e) => reply({ mark: null, mode: 'ask', retry: true, debug: { error: String((e as Error)?.stack ?? e).slice(0, 300) } } satisfies Answer)); // a failure is no longer silent: the page shows it and asks again
   return true; // the answer comes later
 });
 
