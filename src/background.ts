@@ -1,7 +1,8 @@
 // Skipz's worker. The page asks "is there a sponsor in this video?"; the worker asks the shared list first, then reads the page the person opened (one page, never in a loop),
 // answers with a mark, and, after "I agree", sends what it found back to the Index. Nothing is ever sent for a video the person did not open.
 import { readYouTubeTab } from '@detector/lib/youtube/reader';
-import { transcriptViaPage } from '@detector/lib/youtube/innertube';
+import { readTranscript } from '@detector/lib/youtube/transcript';
+import type { ItTranscript } from '@detector/lib/youtube/innertube';
 import { loadSettings, bump } from './settings';
 import { effectiveMode } from './gate';
 import { burstsOf } from '@detector/lib/sponsor/check';
@@ -25,7 +26,10 @@ async function check(tabId: number, ask: Ask): Promise<Answer> {
   if (known) { done.set(ask.videoId, known); void bump('marked'); return { mark: known, mode }; }
   const page = await readYouTubeTab(tabId, ask.url);
   if (page.kind !== 'video' || page.video.videoId !== ask.videoId) return { mark: null, mode }; // the page was not ready or the person moved on: not remembered, asked again later
-  const captions = await transcriptViaPage(tabId, ask.videoId); // YouTube's own captions through the page's own interface: no key, no panel, nothing shown; a refusal just leaves it out
+  // YouTube's own captions: first the quiet route (the page's own interface, nothing shown); if YouTube refuses that, the Transcript panel is opened out of sight, read and closed again (the same two steps Skipz takes).
+  // Until 2026-10-22 only the quiet route was tried, so a refused video got no times and so no mark.
+  const tr = await readTranscript(tabId, ask.videoId);
+  const captions: ItTranscript = tr.state === 'ok' ? tr : tr.state === 'none' ? { state: 'none' } : { state: 'trouble', why: tr.why ?? 'The transcript did not open in time.' };
   const v = verdictOf(page, captions);
   const more = burstsOf(v).filter((b) => !b.main && b.end !== null).map((b) => ({ start: b.start, end: b.end! })); // every other burst the reading found
   const mark = v.sponsored ? markFrom(ask.videoId, { ...v, more }, 'page') : null;

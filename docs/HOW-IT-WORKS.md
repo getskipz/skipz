@@ -11,7 +11,7 @@ You open a video. The page script asks the background worker: "is there a sponso
 | Chapters | A chapter named after the brand | The start of the ad |
 | Captions | YouTube's own captions, read in your tab | Spoken cues, with times |
 
-The captions are the only way to catch an ad that the creator never wrote down. Skipz reads them through the page's own interface. If YouTube refuses, Skipz goes on with the other three.
+The captions are the only way to catch an ad that the creator never wrote down. Skipz first asks the page's own interface for them. If YouTube refuses, Skipz presses YouTube's own "Show transcript" button out of sight, reads the lines, and closes the panel again. If that fails too, Skipz goes on with the other three, which carry no times, so it marks nothing rather than guess.
 
 ## From signs to a mark
 
