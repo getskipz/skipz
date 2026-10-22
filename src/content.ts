@@ -272,8 +272,12 @@ async function open(again = false) {
   if (!id) return;
   style();
   const msg: Ask = { type: 'check', videoId: id, url: location.href };
+  const asked = Date.now();
+  const trail = (o: unknown) => { try { document.documentElement.setAttribute('data-skipz', JSON.stringify(o)); } catch { /* nothing to show */ } }; // readable from the page: what Skipz asked, when it was answered, and what the check found
+  trail({ video: id, asking: true });
   try {
     const a: Answer | undefined = await chrome.runtime.sendMessage(msg);
+    trail({ video: id, answeredAfterMs: Date.now() - asked, marked: !!a?.mark, retry: !!a?.retry, mode: a?.mode, noCaptions: a?.noCaptions, listen: a?.listen, debug: a?.debug ?? null });
     if (idOf() !== id || !a) return; // the person moved on
     mode = a.mode; mark = a.mark; bursts = a.mark ? burstsOfMark(a.mark) : [];
     if (a.retry && retriesLeft-- > 0) retryTimer = window.setTimeout(() => { if (idOf() === id) void open(true); }, 13000); // the first reading was incomplete: look again in a moment (a few times)

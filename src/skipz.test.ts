@@ -38,7 +38,8 @@ describe('marks', () => {
     expect(markFrom('a', { ...good, brand: null }, 'page')?.brand).toBe('Sponsor'); // a sure, timed sponsor is marked even when nobody could name it
     expect(markFrom('a', { ...good, end: null }, 'page')).toBeNull();
     expect(markFrom('a', { ...good, end: 1500 }, 'page')).toBeNull();
-    expect(markFrom('a', { ...good, end: 122 }, 'page')).toBeNull();
+    expect(markFrom('a', { ...good, end: 122, confidence: 0.75 }, 'page')).toBeNull(); // short and not sure enough to stretch
+    expect(markFrom('a', { ...good, end: 122 }, 'page')).toMatchObject({ start: 118, end: 153 }); // short but sure: given the minimum read, then padded
   });
 });
 

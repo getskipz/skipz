@@ -27,15 +27,21 @@ export const burstsOfMark = (m: Mark): Burst[] => [{ start: m.start, end: m.end 
 export const SURE = 0.7; // under this, nothing is marked: a wrong mark is worse than a missed one
 // Padding on what Skipz read from the page (2026-10-22, measured on 60 finds that SponsorBlock's crowd also marked, used only as a yardstick): the reading starts at the sentence that cues the ad, which runs a little
 // behind the real start, and ends a little before the real end. Two seconds earlier on the start and three later on the end raised "end within 3 seconds" from 51 to 65 percent and "start within 3 seconds" from 40 to 47 percent.
+export const MIN_READ = 30; // seconds: the shortest read Skipz marks when it is sure there is one
 export const START_LEAD = 2;
 export const END_TAIL = 3;
 const pad = (b: Burst): Burst => ({ start: Math.max(0, b.start - START_LEAD), end: b.end + END_TAIL });
 export function markFrom(videoId: string, x: { brand: string | null; start: number | null; end: number | null; confidence: number; more?: Burst[] }, from: Mark['from']): Mark | null {
   if (x.start === null || x.end === null) return null; // no brand needed: nothing on screen names it (maintainer, 2026-10-22), so a sure, timed sponsor with no readable name is still marked
-  if (x.confidence < SURE || x.end - x.start < 5 || x.end - x.start > 900) return null;
+  if (x.confidence < SURE || x.end - x.start > 900) return null;
+  // A sure sponsor whose read looks short is NOT thrown away (2026-10-22, a real Fireship video: the cue "is <brand>, the sponsor of today's video" at 5:38, then the creator describes the product with no sales line and the captions misspell the name, so the reading closed the read after 2 seconds).
+  // A spoken sponsor read lasts a good while: such a read is given MIN_READ seconds. A wrong guess here shows the question or skips a little too much, never the whole video.
+  const start = x.start;
+  const end = x.end - x.start < MIN_READ && x.confidence >= 0.85 ? x.start + MIN_READ : x.end;
+  if (end - start < 5) return null;
   const more = (x.more ?? []).filter((b) => b.end - b.start >= 2 && b.end - b.start <= 900).slice(0, 4); // a short plug can be only a few seconds
   const padded = from === 'page'; // a mark from the Index already carries its own times
-  const main = padded ? pad({ start: x.start, end: x.end }) : { start: x.start, end: x.end };
+  const main = padded ? pad({ start, end }) : { start, end };
   const others = padded ? more.map(pad) : more;
   return { videoId, brand: x.brand ?? 'Sponsor', start: main.start, end: main.end, confidence: x.confidence, from, ...(others.length ? { more: others } : {}) };
 }

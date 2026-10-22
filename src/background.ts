@@ -15,12 +15,18 @@ import { isLocalCopy, readBuildId } from '@detector/lib/autoUpdate';
 export type Ask = { type: 'check'; videoId: string; url: string };
 // found: a sponsor was found but not where it is (no times); retry: the reading was incomplete (captions refused or not ready yet), so the page asks again in a moment;
 // noCaptions: no caption could be read, so the page may LISTEN to the video instead (listen says whether the person agreed to that); known: the brands the page already names (the second ear spells them right)
-export type Answer = { mark: Mark | null; mode: 'off' | 'ask' | 'skip'; found?: string; retry?: boolean; noCaptions?: boolean; listen?: Listen; known?: string[] };
+// debug: a short record of what the check did and how long each step took, shown on the page as the attribute data-skipz (and in "Copy info for support"), so a slow or empty check can be seen without guessing
+export type Debug = { calls?: string[]; pingMs?: number; pageMs?: number; captionsMs?: number; totalMs?: number; page?: string; captions?: string; why?: string; sponsored?: boolean; conf?: number; start?: number | null; end?: number | null; votes?: string[]; error?: string };
+export type Answer = { debug?: Debug; mark: Mark | null; mode: 'off' | 'ask' | 'skip'; found?: string; retry?: boolean; noCaptions?: boolean; listen?: Listen; known?: string[] };
 
 // This session's answers, so a video is read once. An INCOMPLETE answer (no captions read, or a sponsor found without times) is kept only for RETRY_AFTER and tried again, up to TRIES times:
 // the first try can be too early (a video 43 minutes old may have no captions yet), and one refusal must not decide a video for good (2026-10-22, the Fireship video).
 const EARS = typeof chrome.offscreen?.createDocument === 'function'; // Firefox has no such page: there Skipz reads captions and descriptions only
 const RETRY_AFTER = 12000, TRIES = 4; // short: this runs on the video the person has just opened
+// How long each call into the page took (which step is slow on a busy page), kept for the diagnostic trail.
+const calls: string[] = [];
+const realExecute = chrome.scripting.executeScript.bind(chrome.scripting) as (i: unknown) => Promise<unknown>;
+(chrome.scripting as unknown as { executeScript: unknown }).executeScript = (i: { func?: { name?: string }; args?: unknown[] }) => { const t = Date.now(); const name = (i.func?.name || 'fn') + (typeof i.args?.[0] === 'string' ? ':' + String(i.args[0]).replace(/[?].*/, '').slice(-24) : ''); return realExecute(i).finally(() => { calls.push(name + ' ' + (Date.now() - t) + 'ms @' + new Date().toISOString().slice(17, 23)); if (calls.length > 40) calls.shift(); }); };
 const done = new Map<string, { mark: Answer['mark']; found?: string; retryAt: number | null; tries: number; noCaptions: boolean; known: string[] }>();
 
 // The page with no window that holds the listening models (ears.ts). Created the first time something needs it.
@@ -43,9 +49,12 @@ async function check(tabId: number, ask: Ask): Promise<Answer> {
   const known = await askIndex(ask.videoId);
   if (known) { done.set(ask.videoId, { mark: known, retryAt: null, tries: 1, noCaptions: false, known: [] }); void bump('marked'); return { mark: known, mode }; }
   // The page and the captions are read AT THE SAME TIME (the captions need only the video's id), so neither waits for the other.
+  calls.length = 0;
   const t0 = Date.now(); let tPage = 0, tCaps = 0;
-  const [page, tr] = await Promise.all([readYouTubeTab(tabId, ask.url).finally(() => { tPage = Date.now() - t0; }), readTranscript(tabId, ask.videoId).finally(() => { tCaps = Date.now() - t0; })]);
-  if (page.kind !== 'video' || page.video.videoId !== ask.videoId) return { mark: null, mode, retry: true }; // the page was not ready or the person moved on: not remembered, asked again soon
+  let pinged = -1; // how long one trivial call into the page takes: a busy page makes every call wait
+  const ping = chrome.scripting.executeScript({ target: { tabId }, world: 'MAIN', func: () => 1 }).then(() => { pinged = Date.now() - t0; }, () => { pinged = -1; });
+  const [, page, tr] = await Promise.all([ping, readYouTubeTab(tabId, ask.url).finally(() => { tPage = Date.now() - t0; }), readTranscript(tabId, ask.videoId).finally(() => { tCaps = Date.now() - t0; })]);
+  if (page.kind !== 'video' || page.video.videoId !== ask.videoId) return { mark: null, mode, retry: true, debug: { pageMs: tPage, captionsMs: tCaps, page: page.kind === 'video' ? 'other video ' + page.video.videoId : page.kind } }; // the page was not ready or the person moved on: not remembered, asked again soon
   // YouTube's own captions: first the quiet route (the page's own interface, nothing shown); if YouTube refuses that, the Transcript panel is opened out of sight, read and closed again (the same two steps Skipz takes).
   // Until 2026-10-22 only the quiet route was tried, so a refused video got no times and so no mark.
   const captions: ItTranscript = tr.state === 'ok' ? tr : tr.state === 'none' ? { state: 'none' } : { state: 'trouble', why: tr.why ?? 'The transcript did not open in time.' };
@@ -72,7 +81,8 @@ async function check(tabId: number, ask: Ask): Promise<Answer> {
     const r = await sendFinding(ask.videoId, page.video.channelId, { ...v, methods: v.votes }, true);
     if (r === 'sent') void bump('shared'); else if (r === 'later') sentToday.delete(ask.videoId);
   }
-  return { mark, mode, found, retry: retryAt !== null, noCaptions, listen: EARS ? s.listen : 'no', known: named };
+  const debug: Debug = { calls: calls.slice(), pingMs: pinged, pageMs: tPage, captionsMs: tCaps, totalMs: Date.now() - t0, page: 'video', captions: captions.state === 'ok' ? 'ok ' + captions.lines.length + ' lines' : captions.state + (captions.state === 'trouble' ? ': ' + captions.why : ''), sponsored: v.sponsored, conf: Math.round(v.confidence * 100), start: v.start, end: v.end, votes: v.votes.map((x) => x.method + ':' + x.said + ':' + Math.round(x.score * 100)) };
+  return { mark, mode, found, retry: retryAt !== null, noCaptions, listen: EARS ? s.listen : 'no', known: named, debug };
 }
 
 chrome.runtime.onMessage.addListener((msg: Ask | { type: 'stat'; key: 'asked' | 'skipped' | 'kept' } | { type: 'listen-open' } | { type: 'listen-choice'; yes: boolean }, sender, reply) => {
@@ -81,7 +91,7 @@ chrome.runtime.onMessage.addListener((msg: Ask | { type: 'stat'; key: 'asked' | 
   if (msg.type === 'listen-choice') { saveSettings({ listen: msg.yes ? 'yes' : 'no' }).then(() => reply({ ok: true })); return true; }
   const tabId = sender.tab?.id;
   if (msg.type !== 'check' || tabId === undefined) return false;
-  check(tabId, msg).then(reply, () => reply({ mark: null, mode: 'ask' } satisfies Answer));
+  check(tabId, msg).then(reply, (e) => reply({ mark: null, mode: 'ask', retry: true, debug: { error: String((e as Error)?.stack ?? e).slice(0, 300) } } satisfies Answer)); // a failure is no longer silent: the page shows it and asks again
   return true; // the answer comes later
 });
 

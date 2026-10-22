@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Skipz",
-  "version": "0.3.1",
-  "version_name": "0.3.1 beta",
+  "version": "0.3.2",
+  "version_name": "0.3.2 beta",
   "description": "Marks sponsor segments on YouTube and skips them for you. Asks first by default.",
   "permissions": [
     "storage",
@@ -22,7 +22,7 @@
       "js": [
         "content.js"
       ],
-      "run_at": "document_idle"
+      "run_at": "document_end"
     }
   ],
   "background": {
