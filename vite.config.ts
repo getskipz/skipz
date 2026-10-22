@@ -15,7 +15,7 @@ const dropUnusedOrt = {
 // "@detector" is the detector (the code that reads a video's label, description, chapters and captions), kept in src/detector.
 export default defineConfig({
   resolve: { alias: { '@detector': resolve(import.meta.dirname, 'src/detector') } },
-  define: { __INDEX_URL__: JSON.stringify(''), __BENCH__: JSON.stringify(false) },
+  define: { __INDEX_URL__: JSON.stringify(''), __BENCH__: JSON.stringify(false), __SAVE__: JSON.stringify(process.env.SKIPZ_SAVE === '1') },
   plugins: [dropUnusedOrt],
   worker: { format: 'es' },
   build: {

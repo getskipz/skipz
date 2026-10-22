@@ -5,6 +5,8 @@ import type { Answer, Ask } from './background';
 import type { Burst, Mark } from './verdict'; // types only: a content script cannot import code from another file
 const burstsOfMark = (m: Mark): Burst[] => [{ start: m.start, end: m.end }, ...(m.more ?? [])]; // the same one-liner as in verdict.ts
 
+// A bookmark after "Keep watching" that saves the sponsor to look at later (maintainer, 2026-10-22: "hide for now, it'll be used in the future"). Built but OFF: the build turns it on with SKIPZ_SAVE=1.
+declare const __SAVE__: boolean;
 const LEAD = 3; // seconds before a burst when the question appears
 let mark: Mark | null = null;
 let bursts: Burst[] = [];
@@ -39,6 +41,7 @@ function style() {
 .skipz-chip b{color:#ffd23f}.skipz-chip span{opacity:.75;font-weight:500}
 .skipz-chip button{min-height:44px;padding:0 18px;border:0;border-radius:999px;font:600 14px system-ui,sans-serif;cursor:pointer}
 .skipz-chip .go{background:#ffd23f;color:#111}.skipz-chip .stay{background:#2a2a2a;color:#fff}
+.skipz-chip .save{display:inline-flex;align-items:center;justify-content:center;min-width:44px;padding:0;background:#2a2a2a;color:#fff}.skipz-chip .save svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linejoin:round}.skipz-chip .save[aria-pressed=true]{color:#ffd23f}.skipz-chip .save[aria-pressed=true] svg{fill:currentColor}
 .skipz-chip button:active{transform:scale(.96)}.skipz-chip button:focus-visible{outline:2px solid #fff;outline-offset:2px}
 @keyframes skipz-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){.skipz-chip{animation:none}}`;
@@ -91,6 +94,26 @@ function show(html: (c: HTMLElement) => void, forMs = 0) {
 }
 
 const button = (label: string, cls: string, on: () => void) => { const b = document.createElement('button'); b.type = 'button'; b.className = cls; b.textContent = label; b.addEventListener('click', on); return b; };
+// The bookmark button (only when the build has it on). Pressing it keeps this sponsor in the browser's own storage: where it was, which video, when. Nothing is sent anywhere.
+const saveButton = (b: Burst): HTMLElement[] => {
+  if (!__SAVE__ || !mark) return [];
+  const m = mark;
+  const btn = document.createElement('button');
+  btn.type = 'button'; btn.className = 'save'; btn.title = 'Save this sponsor for later'; btn.setAttribute('aria-label', 'Save this sponsor for later'); btn.setAttribute('aria-pressed', 'false');
+  btn.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-6-4.5L6 21z"/></svg>';
+  btn.addEventListener('click', () => {
+    const on = btn.getAttribute('aria-pressed') !== 'true';
+    btn.setAttribute('aria-pressed', String(on));
+    try {
+      void chrome.storage.local.get('savedSponsors').then((r) => {
+        const all: { videoId: string; start: number }[] = Array.isArray(r.savedSponsors) ? r.savedSponsors : [];
+        const rest = all.filter((x) => !(x.videoId === m.videoId && x.start === b.start));
+        void chrome.storage.local.set({ savedSponsors: on ? [{ videoId: m.videoId, title: document.title.replace(/ - YouTube$/, ''), brand: m.brand, start: b.start, end: b.end, savedAt: new Date().toISOString() }, ...rest].slice(0, 200) : rest });
+      });
+    } catch { /* the extension was reloaded */ }
+  });
+  return [btn];
+};
 const words = (c: HTMLElement, brand: string, rest: string) => { const b = document.createElement('b'); b.textContent = brand; const s = document.createElement('span'); s.textContent = rest; c.append(b, s); };
 
 function skip(b: Burst) {
@@ -108,7 +131,7 @@ function ask(b: Burst) {
   stat('asked');
   show((c) => {
     words(c, 'Sponsor', ' · ' + clock(b.end - b.start));
-    c.append(button('Skip it', 'go', () => skip(b)), button('Keep watching', 'stay', () => { dismissed.add(b.start); stat('kept'); chip?.remove(); chip = null; }));
+    c.append(button('Skip it', 'go', () => skip(b)), button('Keep watching', 'stay', () => { dismissed.add(b.start); stat('kept'); chip?.remove(); chip = null; }), ...saveButton(b));
   });
 }
 
@@ -228,7 +251,7 @@ function heardAd(l: LiveAd) {
   stat('asked');
   show((c) => {
     words(c, 'Sponsor', ' started');
-    c.append(button('Skip it', 'go', () => void skipAhead()), button('Keep watching', 'stay', () => { stat('kept'); chip?.remove(); chip = null; }));
+    c.append(button('Skip it', 'go', () => void skipAhead()), button('Keep watching', 'stay', () => { stat('kept'); chip?.remove(); chip = null; }), ...saveButton({ start: l.start, end: l.end }));
   });
 }
 
