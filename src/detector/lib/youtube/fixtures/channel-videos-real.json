@@ -1,0 +1,26 @@
+{
+  "note": "REAL YouTube channel Videos tab (Marvel Entertainment), read-only capture in the maintainer's Chrome with their OK on 2026-09-29, trimmed to the fields Skipz reads (first 4 of 30 videos). Structure and values as YouTube served them.",
+  "url": "https://www.youtube.com/@marvel/videos",
+  "player": null,
+  "data": {
+    "metadata": { "channelMetadataRenderer": { "title": "Marvel Entertainment", "externalId": "UCvC4D8onUfXzvjTOM-dBfEA", "vanityChannelUrl": "http://www.youtube.com/@marvel" } },
+    "header": { "pageHeaderRenderer": { "pageTitle": "Marvel Entertainment", "content": { "pageHeaderViewModel": { "metadata": { "contentMetadataViewModel": {
+      "metadataRows": [
+        { "metadataParts": [{ "text": { "content": "@marvel" }, "enableTruncation": true }] },
+        { "metadataParts": [{ "text": { "content": "23.8M subscribers" }, "accessibilityLabel": "23.8 million subscribers" }, { "text": { "content": "10K videos" } }] }
+      ],
+      "delimiter": "•"
+    } } } } } },
+    "contents": { "twoColumnBrowseResultsRenderer": { "tabs": [
+      { "tabRenderer": { "title": "Home", "selected": false, "endpoint": { "commandMetadata": { "webCommandMetadata": { "url": "/@marvel/featured" } } } } },
+      { "tabRenderer": { "title": "Videos", "selected": true, "endpoint": { "commandMetadata": { "webCommandMetadata": { "url": "/@marvel/videos" } } },
+        "content": { "richGridRenderer": { "contents": [
+          { "richItemRenderer": { "content": { "lockupViewModel": { "contentId": "1VJXur9ZfQQ", "contentType": "LOCKUP_CONTENT_TYPE_VIDEO", "metadata": { "lockupMetadataViewModel": { "title": { "content": "Paul on Vision | Marvel Television's VisionQuest | Stream October 14 on Disney+" }, "metadata": { "contentMetadataViewModel": { "metadataRows": [{ "metadataParts": [{ "text": { "content": "58K" }, "accessibilityLabel": "58 thousand views" }, { "text": { "content": "2h ago" }, "accessibilityLabel": "2 hours ago" }] }], "delimiter": " " } } } } } } } },
+          { "richItemRenderer": { "content": { "lockupViewModel": { "contentId": "nxDMRvDr4AQ", "contentType": "LOCKUP_CONTENT_TYPE_VIDEO", "metadata": { "lockupMetadataViewModel": { "title": { "content": "Avengers: Doomsday | Silence Your Phones | In Theaters December 18" }, "metadata": { "contentMetadataViewModel": { "metadataRows": [{ "metadataParts": [{ "text": { "content": "1.2M" }, "accessibilityLabel": "1.2 million views" }, { "text": { "content": "5h ago" }, "accessibilityLabel": "5 hours ago" }] }], "delimiter": " " } } } } } } } },
+          { "richItemRenderer": { "content": { "lockupViewModel": { "contentId": "U-hHF_mLdSs", "contentType": "LOCKUP_CONTENT_TYPE_VIDEO", "metadata": { "lockupMetadataViewModel": { "title": { "content": "From JARVIS to Vision: Vision’s Story in the MCU | Marvel Featurette" }, "metadata": { "contentMetadataViewModel": { "metadataRows": [{ "metadataParts": [{ "text": { "content": "119K" }, "accessibilityLabel": "119 thousand views" }, { "text": { "content": "9h ago" }, "accessibilityLabel": "9 hours ago" }] }], "delimiter": " " } } } } } } } },
+          { "richItemRenderer": { "content": { "lockupViewModel": { "contentId": "uUmR6HBc-XI", "contentType": "LOCKUP_CONTENT_TYPE_VIDEO", "metadata": { "lockupMetadataViewModel": { "title": { "content": "Marvel Television's VisionQuest | Two-Episode Premiere | Streaming October 14 on Disney+" }, "metadata": { "contentMetadataViewModel": { "metadataRows": [{ "metadataParts": [{ "text": { "content": "311K" }, "accessibilityLabel": "311 thousand views" }, { "text": { "content": "1d ago" }, "accessibilityLabel": "1 day ago" }] }], "delimiter": " " } } } } } } } }
+        ] } } } },
+      { "tabRenderer": { "title": "Shorts", "selected": false, "endpoint": { "commandMetadata": { "webCommandMetadata": { "url": "/@marvel/shorts" } } } } }
+    ] } }
+  }
+}

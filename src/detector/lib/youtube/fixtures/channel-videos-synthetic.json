@@ -1,0 +1,78 @@
+{
+  "note": "SYNTHETIC channel Videos tab, hand-built 2026-09-28 in the shape of YouTube's channel page (metadata.channelMetadataRenderer, header.pageHeaderRenderer > pageHeaderViewModel, tabs > richGridRenderer with lockupViewModel items shaped exactly like the REAL lockups in watch-real.json). Numbers are made up. The real capture was blocked by Google's consent wall; replace with a real capture from the maintainer's Chrome.",
+  "url": "https://www.youtube.com/@SampleScience/videos",
+  "player": null,
+  "data": {
+    "metadata": {
+      "channelMetadataRenderer": {
+        "title": "Sample Science",
+        "externalId": "UCsample0000000000000001",
+        "vanityChannelUrl": "http://www.youtube.com/@SampleScience",
+        "avatar": { "thumbnails": [{ "url": "https://yt3.googleusercontent.com/sample=s900-c-k-c0x00ffffff-no-rj", "width": 900, "height": 900 }] }
+      }
+    },
+    "header": {
+      "pageHeaderRenderer": {
+        "pageTitle": "Sample Science",
+        "content": {
+          "pageHeaderViewModel": {
+            "title": { "dynamicTextViewModel": { "text": { "content": "Sample Science" } } },
+            "metadata": {
+              "contentMetadataViewModel": {
+                "metadataRows": [
+                  { "metadataParts": [{ "text": { "content": "@SampleScience" } }] },
+                  { "metadataParts": [
+                    { "text": { "content": "1.24M subscribers" }, "accessibilityLabel": "1.24 million subscribers" },
+                    { "text": { "content": "318 videos" }, "accessibilityLabel": "318 videos" }
+                  ] }
+                ]
+              }
+            },
+            "description": { "descriptionPreviewViewModel": { "description": { "content": "Science stories every week." } } }
+          }
+        }
+      }
+    },
+    "contents": {
+      "twoColumnBrowseResultsRenderer": {
+        "tabs": [
+          { "tabRenderer": { "title": "Home", "selected": false, "endpoint": { "commandMetadata": { "webCommandMetadata": { "url": "/@SampleScience" } } } } },
+          { "tabRenderer": { "title": "Videos", "selected": true, "endpoint": { "commandMetadata": { "webCommandMetadata": { "url": "/@SampleScience/videos" } } },
+            "content": { "richGridRenderer": { "contents": [
+              { "richItemRenderer": { "content": { "lockupViewModel": {
+                "contentId": "vidAAAAAAA1", "contentType": "LOCKUP_CONTENT_TYPE_VIDEO",
+                "metadata": { "lockupMetadataViewModel": {
+                  "title": { "content": "Why the sky is not blue on Mars" },
+                  "metadata": { "contentMetadataViewModel": { "metadataRows": [
+                    { "metadataParts": [
+                      { "text": { "content": "412K views" }, "accessibilityLabel": "412 thousand views" },
+                      { "text": { "content": "5 days ago" }, "accessibilityLabel": "5 days ago" }
+                    ] }
+                  ] } }
+                } }
+              } } } },
+              { "richItemRenderer": { "content": { "lockupViewModel": {
+                "contentId": "vidAAAAAAA2", "contentType": "LOCKUP_CONTENT_TYPE_VIDEO",
+                "metadata": { "lockupMetadataViewModel": {
+                  "title": { "content": "I built a 3 metre magnet" },
+                  "metadata": { "contentMetadataViewModel": { "metadataRows": [
+                    { "metadataParts": [
+                      { "text": { "content": "1.1M views" }, "accessibilityLabel": "1.1 million views" },
+                      { "text": { "content": "3 weeks ago" }, "accessibilityLabel": "3 weeks ago" }
+                    ] }
+                  ] } }
+                } }
+              } } } },
+              { "richItemRenderer": { "content": { "videoRenderer": {
+                "videoId": "vidAAAAAAA3",
+                "title": { "runs": [{ "text": "The older layout still works" }] },
+                "viewCountText": { "simpleText": "98,120 views" },
+                "publishedTimeText": { "simpleText": "2 months ago" }
+              } } } },
+              { "continuationItemRenderer": { "trigger": "CONTINUATION_TRIGGER_ON_ITEM_SHOWN" } }
+            ] } } } }
+        ]
+      }
+    }
+  }
+}

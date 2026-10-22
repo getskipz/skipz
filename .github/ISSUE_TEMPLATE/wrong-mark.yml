@@ -1,0 +1,17 @@
+name: Wrong mark
+description: Skipz marked the wrong part, or marked a video with no sponsor
+labels: [wrong-mark]
+body:
+  - type: input
+    id: video
+    attributes: { label: Video link }
+    validations: { required: true }
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What went wrong
+      options: ["Marked a video that has no sponsor", "Marked the wrong brand", "Started too early or too late", "Ended too early or too late", "Skipped something I wanted to watch"]
+    validations: { required: true }
+  - type: input
+    id: when
+    attributes: { label: What Skipz marked, and where the ad really runs, description: "Like: marked 4:10 to 5:35, the ad runs 3:50 to 5:20" }

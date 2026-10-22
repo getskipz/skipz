@@ -1,0 +1,21 @@
+{
+  "name": "skipz",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "license": "Apache-2.0",
+  "description": "Skipz: finds the sponsor part of a YouTube video, names the brand, and asks before you skip it. Nothing leaves your computer.",
+  "scripts": {
+    "build": "tsc --noEmit && vite build",
+    "build:firefox": "npm run build && node scripts/build-firefox.cjs",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.3.1",
+    "@types/node": "^24.0.0",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.1",
+    "vitest": "^5.0.2"
+  }
+}

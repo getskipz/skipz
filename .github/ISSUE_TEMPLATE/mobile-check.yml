@@ -1,0 +1,33 @@
+name: Mobile check
+description: You tried Skipz on a phone or tablet (a "no" helps as much as a "yes")
+labels: [mobile-check]
+body:
+  - type: input
+    id: device
+    attributes: { label: Phone or tablet and Android version, placeholder: "Pixel 8, Android 15" }
+    validations: { required: true }
+  - type: input
+    id: browser
+    attributes: { label: Browser and version, placeholder: "Firefox 142" }
+    validations: { required: true }
+  - type: input
+    id: video
+    attributes: { label: Video link you tried }
+  - type: dropdown
+    id: mark
+    attributes: { label: Did a yellow mark show along the bottom of the video?, options: ["Yes, over the sponsor part", "Yes, but in the wrong place", "No mark at all", "The video had no sponsor, and nothing showed (correct)"] }
+    validations: { required: true }
+  - type: dropdown
+    id: ask
+    attributes: { label: Did "Skip it? / Keep watching" show before the ad?, options: ["Yes", "Yes, but too late or too early", "No"] }
+    validations: { required: true }
+  - type: dropdown
+    id: skip
+    attributes: { label: Did Skip it jump past the ad, and did Undo bring you back?, options: ["Both worked", "Skip worked, Undo did not", "Skip did not work", "I did not try"] }
+    validations: { required: true }
+  - type: dropdown
+    id: tap
+    attributes: { label: Were the buttons easy to tap?, options: ["Yes", "Too small", "Something covered them"] }
+  - type: textarea
+    id: more
+    attributes: { label: Anything else, description: "A screenshot helps. Nothing private." }
