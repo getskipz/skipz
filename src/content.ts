@@ -261,12 +261,13 @@ async function skipAhead() {
 
 let current: string | null = null;
 let retryTimer = 0;
+let retriesLeft = 4;
 let noted: string | null = null; // the video the "found a sponsor, not where" note was shown for
 async function open(again = false) {
   const id = idOf();
   if (id === current && !again) return;
   window.clearTimeout(retryTimer);
-  if (!again) clear();
+  if (!again) { clear(); retriesLeft = 4; }
   current = id;
   if (!id) return;
   style();
@@ -275,7 +276,7 @@ async function open(again = false) {
     const a: Answer | undefined = await chrome.runtime.sendMessage(msg);
     if (idOf() !== id || !a) return; // the person moved on
     mode = a.mode; mark = a.mark; bursts = a.mark ? burstsOfMark(a.mark) : [];
-    if (a.retry) retryTimer = window.setTimeout(() => { if (idOf() === id) void open(true); }, 13000); // the first reading was incomplete: look again in a moment
+    if (a.retry && retriesLeft-- > 0) retryTimer = window.setTimeout(() => { if (idOf() === id) void open(true); }, 13000); // the first reading was incomplete: look again in a moment (a few times)
     knownNow = a.known ?? [];
     const canListen = a.noCaptions && !a.mark && mode !== 'off' && a.listen !== 'no';
     if (canListen && a.listen === 'yes') { if (listeningFor !== id) void startListening(id, knownNow); }

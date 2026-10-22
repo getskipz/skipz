@@ -35,7 +35,7 @@ describe('marks', () => {
   });
   it('does not mark when unsure, unnamed, untimed or silly-long', () => {
     expect(markFrom('a', { ...good, confidence: 0.5 }, 'page')).toBeNull();
-    expect(markFrom('a', { ...good, brand: null }, 'page')).toBeNull();
+    expect(markFrom('a', { ...good, brand: null }, 'page')?.brand).toBe('Sponsor'); // a sure, timed sponsor is marked even when nobody could name it
     expect(markFrom('a', { ...good, end: null }, 'page')).toBeNull();
     expect(markFrom('a', { ...good, end: 1500 }, 'page')).toBeNull();
     expect(markFrom('a', { ...good, end: 122 }, 'page')).toBeNull();

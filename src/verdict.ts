@@ -31,11 +31,11 @@ export const START_LEAD = 2;
 export const END_TAIL = 3;
 const pad = (b: Burst): Burst => ({ start: Math.max(0, b.start - START_LEAD), end: b.end + END_TAIL });
 export function markFrom(videoId: string, x: { brand: string | null; start: number | null; end: number | null; confidence: number; more?: Burst[] }, from: Mark['from']): Mark | null {
-  if (!x.brand || x.start === null || x.end === null) return null;
+  if (x.start === null || x.end === null) return null; // no brand needed: nothing on screen names it (maintainer, 2026-10-22), so a sure, timed sponsor with no readable name is still marked
   if (x.confidence < SURE || x.end - x.start < 5 || x.end - x.start > 900) return null;
   const more = (x.more ?? []).filter((b) => b.end - b.start >= 2 && b.end - b.start <= 900).slice(0, 4); // a short plug can be only a few seconds
   const padded = from === 'page'; // a mark from the Index already carries its own times
   const main = padded ? pad({ start: x.start, end: x.end }) : { start: x.start, end: x.end };
   const others = padded ? more.map(pad) : more;
-  return { videoId, brand: x.brand, start: main.start, end: main.end, confidence: x.confidence, from, ...(others.length ? { more: others } : {}) };
+  return { videoId, brand: x.brand ?? 'Sponsor', start: main.start, end: main.end, confidence: x.confidence, from, ...(others.length ? { more: others } : {}) };
 }
