@@ -47,6 +47,7 @@ async function render() {
     el('div', { class: 'nums' }, ...(['checked', 'marked', 'skipped'] as (keyof Stats)[]).map((k) => el('div', {}, el('b', {}, String(stats[k])), el('span', {}, k === 'checked' ? 'looked at' : k === 'marked' ? 'marked' : 'skipped')))),
     el('p', { class: 'muted' }, 'Skipz reads the video’s own captions and description on your computer. Nothing is sent anywhere.'),
     el('button', { class: 'link', type: 'button', onclick: async (e: Event) => { await navigator.clipboard.writeText(JSON.stringify({ version: chrome.runtime.getManifest().version, settings: s, stats, skipLockMissing: gate.missing, indexSet: !!INDEX_URL }, null, 2)); (e.target as HTMLElement).textContent = 'Copied'; } }, 'Copy info for support'),
+    el('p', { class: 'fine' }, 'Skipz isn’t perfect. It can miss a sponsor or mark the wrong stretch, which is why it always asks first. Spot a mistake? Tell us at github.com/getskipz/skipz and you help everyone.'),
   );
 }
 void render();
