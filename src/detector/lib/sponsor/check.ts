@@ -242,6 +242,8 @@ export function sponsorSaid(lines: { t: number; text: string }[]): number[] {
   return out;
 }
 
+export const SHORT_READ = 20; // seconds: a cue-based read shorter than this is stretched (see byTranscript)
+export const MIN_READ = 30;
 export function byTranscript(t: { state: 'ok'; lines: { t: number; text: string }[] } | { state: 'none' } | { state: 'timeout'; why?: string } | { state: 'reading' } | null, brands: string[]): Vote {
   if (!t) return { method: 'transcript', said: 'unknown', score: 0, proof: 'Not read yet' };
   if (t.state === 'reading') return { method: 'transcript', said: 'unknown', score: 0, proof: "Reading YouTube's transcript…" };
@@ -357,7 +359,12 @@ export function byTranscript(t: { state: 'ok'; lines: { t: number; text: string 
   const t0 = lines[start].t;
   const burstEnd = (b: Burst) => lines[b.last + 1]?.t ?? lines[b.last].t + 5;
   const last = Math.max(main.last, start);
-  const end = lines[last + 1]?.t ?? lines[last].t + 5;
+  const rawEnd = lines[last + 1]?.t ?? lines[last].t + 5;
+  // A spoken cue starts a read that lasts a good while, but the reading closes it at the last line that sells or names the brand (2026-10-22, real videos: "is Macroscope, the sponsor of today's video" at 5:38 ended at 5:40,
+  // "they're sponsoring this part of the video" at 6:07 ended at 6:08: the creator then describes the product with no sales line, and the captions misspell the name). A cue-based read that looks shorter than
+  // SHORT_READ seconds is shown as MIN_READ seconds (never past the last caption line), and the proof says the length is a guess.
+  const stretched = !bySignals && !heardAs && rawEnd - lines[start].t < SHORT_READ;
+  const end = stretched ? Math.max(rawEnd, Math.min(lines[start].t + MIN_READ, lines[lines.length - 1].t + 5)) : rawEnd;
   const segments = real.map((b) => ({ start: lines[b.first].t, end: burstEnd(b) })).slice(0, 5);
   const clip = (s: string) => (s.length > 90 ? s.slice(0, 87) + '…' : s);
   return {
@@ -365,7 +372,7 @@ export function byTranscript(t: { state: 'ok'; lines: { t: number; text: string 
     score: bySignals ? (brand ? 0.65 : 0.5) : heardAs ? 0.75 : brand ? 0.9 : 0.7,
     ...(heardAs ? { late: true } : {}),
     ...(segments.length > 1 ? { segments } : {}),
-    proof: 'Said at ' + clock(t0) + ': “' + clip(around(start)) + '”' + (bySignals ? ' (ad signs: ' + bySignals + ')' : '') + (heardAs ? ' (“' + heardAs + '” is how YouTube’s captions spelled ' + brand + ')' : '') + saidNote,
+    proof: 'Said at ' + clock(t0) + ': “' + clip(around(start)) + '”' + (bySignals ? ' (ad signs: ' + bySignals + ')' : '') + (heardAs ? ' (“' + heardAs + '” is how YouTube’s captions spelled ' + brand + ')' : '') + saidNote + (stretched && end > rawEnd ? ' · length is a guess: the lines after the cue do not sell or name the brand' : ''),
     mentions: said,
   };
 }

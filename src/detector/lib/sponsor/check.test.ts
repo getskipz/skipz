@@ -443,3 +443,25 @@ describe('burstsOf: every ad burst Skipz found', () => {
   it('finds bursts even when the verdict has no main time', () => expect(burstsOf(v(null, [tx([{ start: 71, end: 74 }])]))).toEqual([{ start: 71, end: 74, main: true }]));
   it('ignores segments of other methods', () => expect(burstsOf(v(263, [{ method: 'comments', said: 'yes', score: 0.4, proof: '', segments: [{ start: 5, end: 9 }] }])).length).toBe(1));
 });
+
+describe('a cue-based read that looks short is stretched (2026-10-22, two real videos)', () => {
+  // Fireship, "Did Google just dethrone OpenAI and Anthropic?": the cue at 5:38, then the creator describes the product with no sales line, and the captions spell it "Macroscop".
+  const fireship = [[326, 'out of its preputium? And why is it so'], [336, 'definitely doesn\'t have alignment issues'], [338, 'is Macroscope, the sponsor of today\'s'], [340, 'video. Now that coding agents are'], [343, 'requests per day, the The way to keep up'], [350, 'look at how Macroscop actually works.'], [357, 'every code change, which makes every'], [365, 'that can block a failing pull request.'], [380, 'And now back to the video'], [392, 'thanks for watching']].map(([s, text]) => ({ t: s as number, text: text as string }));
+  it('shows 30 seconds, not 2, and says the length is a guess', () => {
+    const v = byTranscript({ state: 'ok', lines: fireship }, ['Macroscope']);
+    expect(v.said).toBe('yes');
+    expect(v.start).toBe(338);
+    expect(v.end).toBe(368);
+    expect(v.proof).toContain('length is a guess');
+  });
+  it('never stretches past the last caption line', () => {
+    const v = byTranscript({ state: 'ok', lines: fireship.filter((l) => l.t <= 343) }, ['Macroscope']);
+    expect(v.end).toBeLessThanOrEqual(348); // the last line is at 343, plus 5
+  });
+  it('leaves a read that is already long alone', () => {
+    const lines = [{ t: 100, text: 'this video is sponsored by Surfshark' }, { t: 110, text: 'use code deal for a discount at surfshark dot com' }, { t: 130, text: 'surfshark is the vpn i use' }, { t: 150, text: 'go to surfshark.com slash deal' }, { t: 160, text: 'anyway back to the video' }];
+    const v = byTranscript({ state: 'ok', lines }, ['Surfshark']);
+    expect(v.end! - v.start!).toBeGreaterThanOrEqual(20);
+    expect(v.proof).not.toContain('length is a guess');
+  });
+});
