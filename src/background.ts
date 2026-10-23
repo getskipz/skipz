@@ -2,6 +2,7 @@
 // answers with a mark, and, after "I agree", sends what it found back to the Index. Nothing is ever sent for a video the person did not open.
 import { readYouTubeTab } from '@detector/lib/youtube/reader';
 import { readTranscript } from '@detector/lib/youtube/transcript';
+import { parseJson3 } from '@detector/lib/youtube/innertube';
 import type { ItTranscript } from '@detector/lib/youtube/innertube';
 import { loadSettings, saveSettings, bump, type Listen } from './settings';
 import { needleCandidates } from '@detector/lib/ai/needle';
@@ -12,11 +13,12 @@ import { verdictOf, markFrom, brandStretches, type Mark } from './verdict';
 import { askIndex, sendFinding, INDEX_URL } from './sharedList';
 import { isLocalCopy, readBuildId } from '@detector/lib/autoUpdate';
 
-export type Ask = { type: 'check'; videoId: string; url: string };
+// capText: the caption file the page script already fetched (at the very start of the page load, before YouTube's scripts get busy); capMs/capWhy: how that went
+export type Ask = { type: 'check'; videoId: string; url: string; capText?: string | null; capMs?: number; capWhy?: string };
 // found: a sponsor was found but not where it is (no times); retry: the reading was incomplete (captions refused or not ready yet), so the page asks again in a moment;
 // noCaptions: no caption could be read, so the page may LISTEN to the video instead (listen says whether the person agreed to that); known: the brands the page already names (the second ear spells them right)
 // debug: a short record of what the check did and how long each step took, shown on the page as the attribute data-skipz (and in "Copy info for support"), so a slow or empty check can be seen without guessing
-export type Debug = { calls?: string[]; pingMs?: number; pageMs?: number; captionsMs?: number; totalMs?: number; page?: string; captions?: string; why?: string; sponsored?: boolean; conf?: number; start?: number | null; end?: number | null; votes?: string[]; error?: string };
+export type Debug = { via?: string; earlyMs?: number; earlyWhy?: string; calls?: string[]; pingMs?: number; pageMs?: number; captionsMs?: number; totalMs?: number; page?: string; captions?: string; why?: string; sponsored?: boolean; conf?: number; start?: number | null; end?: number | null; votes?: string[]; error?: string };
 export type Answer = { debug?: Debug; mark: Mark | null; mode: 'off' | 'ask' | 'skip'; found?: string; retry?: boolean; noCaptions?: boolean; listen?: Listen; known?: string[] };
 
 // This session's answers, so a video is read once. An INCOMPLETE answer (no captions read, or a sponsor found without times) is kept only for RETRY_AFTER and tried again, up to TRIES times:
@@ -54,7 +56,14 @@ async function check(tabId: number, ask: Ask): Promise<Answer> {
   const t0 = Date.now(); let tPage = 0, tCaps = 0;
   let pinged = -1; // how long one trivial call into the page takes: a busy page makes every call wait
   const ping = chrome.scripting.executeScript({ target: { tabId }, world: 'MAIN', func: () => 1 }).then(() => { pinged = Date.now() - t0; }, () => { pinged = -1; });
-  const [, page, tr] = await Promise.all([ping, readYouTubeTab(tabId, ask.url).finally(() => { tPage = Date.now() - t0; }), readTranscript(tabId, ask.videoId).finally(() => { tCaps = Date.now() - t0; })]);
+  // The captions: first the file the page script fetched at the start of the page load (not queued behind YouTube's own scripts); only if that has none, through the page, as before.
+  // (Tried 2026-10-23: asking from the background is refused by YouTube with a 403, so that route is not used.)
+  let via = 'page';
+  const getCaptions = async () => {
+    if (ask.capText) { const lines = parseJson3(ask.capText); if (lines.length) { via = 'early'; return { state: 'ok' as const, lines }; } }
+    return readTranscript(tabId, ask.videoId);
+  };
+  const [, page, tr] = await Promise.all([ping, readYouTubeTab(tabId, ask.url).finally(() => { tPage = Date.now() - t0; }), getCaptions().finally(() => { tCaps = Date.now() - t0; })]);
   if (page.kind !== 'video' || page.video.videoId !== ask.videoId) return { mark: null, mode, retry: true, debug: { pageMs: tPage, captionsMs: tCaps, page: page.kind === 'video' ? 'other video ' + page.video.videoId : page.kind } }; // the page was not ready or the person moved on: not remembered, asked again soon
   // YouTube's own captions: first the quiet route (the page's own interface, nothing shown); if YouTube refuses that, the Transcript panel is opened out of sight, read and closed again (the same two steps Skipz takes).
   // Until 2026-10-22 only the quiet route was tried, so a refused video got no times and so no mark.
@@ -87,7 +96,7 @@ async function check(tabId: number, ask: Ask): Promise<Answer> {
     const r = await sendFinding(ask.videoId, page.video.channelId, { ...v, methods: v.votes }, true);
     if (r === 'sent') void bump('shared'); else if (r === 'later') sentToday.delete(ask.videoId);
   }
-  const debug: Debug = { calls: calls.slice(), pingMs: pinged, pageMs: tPage, captionsMs: tCaps, totalMs: Date.now() - t0, page: 'video', captions: captions.state === 'ok' ? 'ok ' + captions.lines.length + ' lines' : captions.state + (captions.state === 'trouble' ? ': ' + captions.why : ''), sponsored: v.sponsored, conf: Math.round(v.confidence * 100), start: v.start, end: v.end, votes: v.votes.map((x) => x.method + ':' + x.said + ':' + Math.round(x.score * 100)) };
+  const debug: Debug = { via, earlyMs: ask.capMs, earlyWhy: ask.capWhy, calls: calls.slice(), pingMs: pinged, pageMs: tPage, captionsMs: tCaps, totalMs: Date.now() - t0, page: 'video', captions: captions.state === 'ok' ? 'ok ' + captions.lines.length + ' lines' : captions.state + (captions.state === 'trouble' ? ': ' + captions.why : ''), sponsored: v.sponsored, conf: Math.round(v.confidence * 100), start: v.start, end: v.end, votes: v.votes.map((x) => x.method + ':' + x.said + ':' + Math.round(x.score * 100)) };
   return { mark, mode, found: note, retry: retryAt !== null, noCaptions, listen: EARS ? s.listen : 'no', known: named, debug };
 }
 

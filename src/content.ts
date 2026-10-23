@@ -45,18 +45,20 @@ function style() {
 .skipz-chip button:active{transform:scale(.96)}.skipz-chip button:focus-visible{outline:2px solid #fff;outline-offset:2px}
 @keyframes skipz-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){.skipz-chip{animation:none}}`;
-  document.head.appendChild(s);
+  (document.head ?? document.documentElement).appendChild(s);
 }
 
 function clear() {
   drawn.forEach((d) => d.remove()); drawn = [];
   chip?.remove(); chip = null;
   clearTimeout(hideTimer);
+  window.clearTimeout(drawTimer);
   mark = null; bursts = []; dismissed.clear(); skippedAt = null;
   loopToken++; listeningFor = null; handledAd = false; warming = false; // a listening that is running stops
 }
 
 function draw() {
+  style();
   const v = video();
   if (!mark || !bursts.length || !v || !isFinite(v.duration) || v.duration <= 0) return;
   drawn.forEach((d) => d.remove()); drawn = [];
@@ -81,6 +83,7 @@ function draw() {
 }
 
 function show(html: (c: HTMLElement) => void, forMs = 0) {
+  style();
   const player = playerBox();
   if (!player) return;
   chip?.remove();
@@ -282,6 +285,45 @@ async function skipAhead() {
   if (resume && idOf() === id) { handledAd = true; void listenLoop(id, token, knownNow); }
 }
 
+// The captions, asked for the moment the page starts to load (2026-10-23): on a cold open YouTube's own scripts keep the page busy for 9 to 25 seconds, and every call Skipz makes INTO the page waited behind them.
+// This is the same two requests the page route makes (the video's caption list, then the caption file), from the page's own address, so YouTube sees what it always sees; a refusal pauses it for the page's life.
+const EARLY_KEY = 'AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8'; // YouTube's public web key, the one every open-source YouTube client uses
+let earlyPausedUntil = 0;
+async function earlyCaptions(id: string): Promise<{ text: string | null; ms: number; why: string }> {
+  const t0 = Date.now();
+  const out = (text: string | null, why: string) => ({ text, ms: Date.now() - t0, why });
+  if (Date.now() < earlyPausedUntil) return out(null, 'paused');
+  const ctl = new AbortController(); const timer = setTimeout(() => ctl.abort(), 6000);
+  try {
+    const r = await fetch('/youtubei/v1/player?key=' + EARLY_KEY + '&prettyPrint=false', { method: 'POST', signal: ctl.signal, headers: { 'content-type': 'application/json' }, body: JSON.stringify({ context: { client: { clientName: 'ANDROID', clientVersion: '20.10.38', hl: 'en', gl: 'US', androidSdkVersion: 34, osName: 'Android', osVersion: '14' } }, videoId: id, contentCheckOk: true, racyCheckOk: true }) });
+    if (!r.ok) { if (r.status === 403 || r.status === 429) earlyPausedUntil = Date.now() + 3600000; return out(null, 'player ' + r.status); }
+    const j = await r.json() as { playabilityStatus?: { status?: string }; captions?: { playerCaptionsTracklistRenderer?: { captionTracks?: { baseUrl?: string; languageCode?: string; kind?: string }[] } } };
+    if (j.playabilityStatus?.status === 'LOGIN_REQUIRED') { earlyPausedUntil = Date.now() + 3600000; return out(null, 'asked to sign in'); }
+    const tracks = j.captions?.playerCaptionsTracklistRenderer?.captionTracks ?? [];
+    const pick = tracks.find((t) => !t.kind && /^en/i.test(t.languageCode ?? '')) ?? tracks.find((t) => t.kind === 'asr' && /^en/i.test(t.languageCode ?? '')) ?? tracks.find((t) => !t.kind) ?? tracks[0];
+    if (!pick?.baseUrl) return out(null, 'no track');
+    if (/[?&]exp=xpe/.test(pick.baseUrl)) return out(null, 'needs the player');
+    const u = new URL(pick.baseUrl, location.origin); u.searchParams.set('fmt', 'json3');
+    const f = await fetch(u.toString(), { signal: ctl.signal });
+    if (!f.ok) { if (f.status === 403 || f.status === 429) earlyPausedUntil = Date.now() + 3600000; return out(null, 'file ' + f.status); }
+    const text = await f.text();
+    return text.trim() ? out(text, 'ok') : out(null, 'empty file');
+  } catch (e) {
+    return out(null, (e as Error)?.name === 'AbortError' ? 'timed out' : String((e as Error)?.message ?? e).slice(0, 60));
+  } finally { clearTimeout(timer); }
+}
+
+// The marks are drawn as soon as the video's length is known: on YouTube's own seek bar when it exists, else on a thin strip of our own along the video's bottom edge, which moves onto the seek bar the moment YouTube builds it
+// (on a cold open YouTube builds the bar several seconds after the video exists). It looks every 0.4 s, for up to 30 s.
+let drawTimer = 0;
+function drawWhenReady(n = 0, onStrip = false) {
+  window.clearTimeout(drawTimer);
+  const v = video();
+  const bar = !!document.querySelector('.ytp-progress-bar');
+  if (v && isFinite(v.duration) && v.duration > 0 && (bar || !onStrip)) { draw(); if (bar) return; onStrip = true; }
+  if (n < 75) drawTimer = window.setTimeout(() => drawWhenReady(n + 1, onStrip), 400);
+}
+
 let current: string | null = null;
 let retryTimer = 0;
 let retriesLeft = 4;
@@ -293,8 +335,9 @@ async function open(again = false) {
   if (!again) { clear(); retriesLeft = 4; }
   current = id;
   if (!id) return;
-  style();
-  const msg: Ask = { type: 'check', videoId: id, url: location.href };
+  const early = again ? { text: null, ms: 0, why: 'retry' } : await earlyCaptions(id); // a retry asks the page route (the file may not have been ready)
+  if (idOf() !== id) return; // the person moved on while the file loaded
+  const msg: Ask = { type: 'check', videoId: id, url: location.href, capText: early.text, capMs: early.ms, capWhy: early.why };
   const asked = Date.now();
   const trail = (o: unknown) => { try { document.documentElement.setAttribute('data-skipz', JSON.stringify(o)); } catch { /* nothing to show */ } }; // readable from the page: what Skipz asked, when it was answered, and what the check found
   trail({ video: id, asking: true });
@@ -309,9 +352,7 @@ async function open(again = false) {
     if (canListen && a.listen === 'yes') { if (listeningFor !== id) void startListening(id, knownNow); }
     else if (canListen && a.listen === 'ask') { if (!chip) askToListen(id, knownNow); }
     else if (a.found && !a.mark && noted !== id && mode !== 'off') { noted = id; show((c) => { words(c, 'Sponsor found', ''); c.append(button('OK', 'stay', () => { chip?.remove(); chip = null; })); }, 8000); }
-    const v = video();
-    if (v && isFinite(v.duration) && v.duration > 0) draw(); // the length may not be known yet (it arrives a moment after the page opens): then draw when it is
-    else v?.addEventListener('durationchange', draw, { once: true });
+    drawWhenReady();
   } catch (e) { trail({ video: id, error: String((e as Error)?.message ?? e).slice(0, 200) }); /* usually: the extension was reloaded, the next page load starts fresh */ }
 }
 
