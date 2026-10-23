@@ -325,12 +325,14 @@ function drawWhenReady(n = 0, onStrip = false) {
 }
 
 let current: string | null = null;
+let retired = false;
 let retryTimer = 0;
 let retriesLeft = 4;
 let noted: string | null = null; // the video the "found a sponsor, not where" note was shown for
 async function open(again = false) {
   const id = idOf();
   if (id === current && !again) return;
+  if (retired) return;
   window.clearTimeout(retryTimer);
   if (!again) { clear(); retriesLeft = 4; }
   current = id;
@@ -356,8 +358,15 @@ async function open(again = false) {
   } catch (e) { trail({ video: id, error: String((e as Error)?.message ?? e).slice(0, 200) }); /* usually: the extension was reloaded, the next page load starts fresh */ }
 }
 
-document.addEventListener('yt-navigate-finish', () => { current = null; void open(); });
+// When the extension updates, an open YouTube tab keeps the old copy of this script, cut off from the extension. The worker starts a fresh copy in every open YouTube tab (background.ts, 'startInOpenTabs');
+// the fresh copy tells the old one to stand down (copies from before this event existed cannot hear it, so their leftovers on the page are removed too).
+const RETIRE = 'skipz-retire';
+document.dispatchEvent(new CustomEvent(RETIRE));
+document.querySelectorAll('.skipz-chip,.skipz-mark,.skipz-strip,#skipz-style').forEach((e) => e.remove());
+const mine = new AbortController();
+document.addEventListener('yt-navigate-finish', () => { current = null; void open(); }, { signal: mine.signal });
 // The phone site does not send that event the same way, so the address is also checked once a second (a plain string compare)
-window.setInterval(() => { if (idOf() !== current) { current = null; void open(); } }, 1000);
-document.addEventListener('timeupdate', tick, true);
+const poll = window.setInterval(() => { if (idOf() !== current) { current = null; void open(); } }, 1000);
+document.addEventListener('timeupdate', tick, { capture: true, signal: mine.signal });
+document.addEventListener(RETIRE, () => { retired = true; mine.abort(); window.clearInterval(poll); window.clearTimeout(retryTimer); clear(); }, { once: true });
 void open();

@@ -111,6 +111,14 @@ chrome.runtime.onMessage.addListener((msg: Ask | { type: 'stat'; key: 'asked' | 
   return true; // the answer comes later
 });
 
+// Tabs that were already open when Skipz was installed or updated keep no working page script (the old copy is cut off from the extension): start a fresh one in each, once.
+// The page script retires any older copy itself. Only the video pages: the same address list as the manifest.
+async function startInOpenTabs() {
+  const tabs = await chrome.tabs.query({ url: ['https://www.youtube.com/*', 'https://m.youtube.com/*'] });
+  for (const t of tabs) if (t.id !== undefined) chrome.scripting.executeScript({ target: { tabId: t.id }, files: ['content.js'] }).catch(() => { /* a tab that is closing or asleep: it loads the new script itself */ });
+}
+chrome.runtime.onInstalled.addListener((d) => { if (d.reason === 'install' || d.reason === 'update') void startInOpenTabs(); });
+
 // Local copy only ("Load unpacked"): when a new build changed the worker, the page script or the manifest, reload the whole extension, so nobody presses reload at chrome://extensions.
 // A page you already have open keeps the old page script until it is reloaded; the popup and the worker are new at once.
 const UPDATE_ALARM = 'skipz-local-update';
