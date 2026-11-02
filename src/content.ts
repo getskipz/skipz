@@ -2,6 +2,7 @@
 // a short plug up front and the main read later are two bursts, each marked and each asked about).
 // It never skips on its own unless the person chose that AND the lock in gate.ts is open (the worker reports the mode that is really in force).
 import type { Answer, Ask } from './background';
+import { endOffer } from './offerLink';
 import type { Burst, Mark } from './verdict'; // types only: a content script cannot import code from another file
 const burstsOfMark = (m: Mark): Burst[] => [{ start: m.start, end: m.end }, ...(m.more ?? [])].reduce<Burst[]>((out, b) => { // the same as in verdict.ts: overlapping bursts are drawn as one
   const hit = out.find((o) => b.start <= o.end && b.end >= o.start);
@@ -15,6 +16,7 @@ const LEAD = 7; // seconds before a burst when the question appears (maintainer,
 let mark: Mark | null = null;
 let bursts: Burst[] = [];
 let mode: Answer['mode'] = 'ask';
+let supported = false; // the person pressed "Support me" on this video: at the end of the video the sponsor's own link is offered (maintainer, 2026-11-02)
 const dismissed = new Set<number>(); // bursts ("Support me" or an Undo) the person has answered on this video, by their start
 let skippedAt: number | null = null; // where the person was before a skip, for Undo
 let drawn: HTMLElement[] = [];
@@ -57,7 +59,7 @@ function clear() {
   chip?.remove(); chip = null;
   clearTimeout(hideTimer);
   window.clearTimeout(drawTimer);
-  mark = null; bursts = []; dismissed.clear(); skippedAt = null;
+  mark = null; bursts = []; dismissed.clear(); skippedAt = null; supported = false;
   loopToken++; listeningFor = null; handledAd = false; warming = false; // a listening that is running stops
 }
 
@@ -163,8 +165,18 @@ function ask(b: Burst) {
   stat('asked');
   show((c) => {
     words(c, 'Sponsor', ' · ' + clock(b.end - b.start));
-    c.append(button('Skip it', 'go', () => skip(b)), button('Support me', 'stay', () => { dismissed.add(b.start); stat('kept'); chip?.remove(); chip = null; }), ...saveButton(b));
+    c.append(button('Skip it', 'go', () => skip(b)), button('Support me', 'stay', () => { dismissed.add(b.start); supported = true; stat('kept'); chip?.remove(); chip = null; }), ...saveButton(b));
   });
+}
+
+// The video has ended and the person pressed "Support me": offer the sponsor's own link (the channel's discount link from the description), opened in a new tab by a click, never by itself.
+function onEnded() {
+  const offer = endOffer(supported, mark, idOf());
+  if (!offer) return;
+  show((c) => {
+    words(c, 'Thank you', ' for supporting');
+    c.append(button('Visit ' + offer.name, 'go', () => { window.open(offer.url, '_blank', 'noopener,noreferrer'); chip?.remove(); chip = null; }), button('Close', 'stay', () => { chip?.remove(); chip = null; }));
+  }, 30000);
 }
 
 function tick() {
@@ -301,7 +313,7 @@ function heardAd(l: LiveAd) {
   stat('asked');
   show((c) => {
     words(c, 'Sponsor', ' started');
-    c.append(button('Skip it', 'go', () => void skipAhead()), button('Support me', 'stay', () => { stat('kept'); chip?.remove(); chip = null; }), ...saveButton({ start: l.start, end: l.end }));
+    c.append(button('Skip it', 'go', () => void skipAhead()), button('Support me', 'stay', () => { supported = true; stat('kept'); chip?.remove(); chip = null; }), ...saveButton({ start: l.start, end: l.end }));
   });
 }
 
@@ -505,5 +517,6 @@ document.addEventListener('yt-navigate-finish', () => { current = null; void ope
 // The phone site does not send that event the same way, so the address is also checked once a second (a plain string compare)
 const poll = window.setInterval(() => { if (idOf() !== current) { current = null; void open(); } }, 1000);
 document.addEventListener('timeupdate', tick, { capture: true, signal: mine.signal });
+document.addEventListener('ended', onEnded, { capture: true, signal: mine.signal });
 document.addEventListener(RETIRE, () => { retired = true; mine.abort(); window.clearInterval(poll); window.clearTimeout(retryTimer); clear(); }, { once: true });
 void open();

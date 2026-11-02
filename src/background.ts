@@ -14,6 +14,7 @@ import { effectiveMode } from './gate';
 import { verdictOf, decide, type Mark } from './verdict';
 import { askIndex, sendFinding, INDEX_URL } from './sharedList';
 import { isLocalCopy, readBuildId } from '@detector/lib/autoUpdate';
+import { offerLink } from './offerLink';
 
 // capText: the caption file the page script already fetched (at the very start of the page load, before YouTube's scripts get busy); capMs/capWhy: how that went
 export type Ask = { type: 'check'; videoId: string; url: string; capText?: string | null; capMs?: number; capWhy?: string; capVia?: string; capText2?: string | null; force?: boolean }; // capText2: the player's other caption track (Capture); force: look again with it, ignoring the saved answer
@@ -116,7 +117,10 @@ async function check(tabId: number, ask: Ask): Promise<Answer> {
   const needleWanted = true; // the naming model runs on EVERY video (maintainer's rule, 2026-10-24: every detector, every time), AFTER the answer goes out so nobody waits; it feeds the listening's brand list
   const named = [...new Set(v.votes.map((x) => x.brand).filter((x): x is string => !!x))];
   const noCaptions = captions.state !== 'ok';
-  const { mark, probable } = decide(ask.videoId, v, captions.state === 'ok' ? captions.lines : null, page.video.description); // the same function the replay tests run (src/replay.test.ts)
+  const decided = decide(ask.videoId, v, captions.state === 'ok' ? captions.lines : null, page.video.description); // the same function the replay tests run (src/replay.test.ts)
+  const link = offerLink(page.video.description, v.brand, v.site); // the channel's own link for this sponsor, if the description has one (maintainer, 2026-11-02)
+  const mark = decided.mark ? { ...decided.mark, ...(link ? { link } : {}) } : null;
+  const probable = decided.probable;
   // Only the misses are kept (maintainer, 2026-11-01): sure there is a sponsor, but not placed, or placed only by a best guess. Kept on this computer; the popup can save them to a file.
   if (v.sponsored && !mark) void keepMiss({ videoId: ask.videoId, title: page.video.title ?? null, channel: page.channel?.name ?? null, lengthSeconds: page.video.lengthSeconds ?? null, paid: !!page.video.paidPromotion, description: (page.video.description ?? '').slice(0, 3000), chapters: page.video.chapters ?? [], captionLines: captions.state === 'ok' ? captions.lines : null, brand: v.brand, confidence: v.confidence, why: !mark ? 'found, not placed' : 'placed by the words of the description (' + probable + ')', at: new Date().toISOString(), version: chrome.runtime.getManifest().version });
   const tries = (prev?.tries ?? 0) + 1;
