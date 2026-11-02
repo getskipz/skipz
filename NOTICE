@@ -1,6 +1,8 @@
 Skipz
 Copyright 2026 Yx
 
+Skipz is free software under the GNU General Public License, version 3 or later (see LICENSE). The copyright holder also offers a separate commercial licence on request (see README).
+
 This product includes the Skipz detector (src/detector), which is part of the same work and under the same licence.
 
 The listening feature uses these open-source components, each under its own licence:

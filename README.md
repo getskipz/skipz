@@ -65,6 +65,8 @@ Skipz is run by one person for now: Yx. I read every report. Replies can take a 
 
 ## Licence
 
-[Apache License 2.0](LICENSE). Skipz is free to use, change and share. The name Skipz and its logo are not part of the licence.
+[GNU General Public License, version 3 or later](LICENSE). Skipz is free to use, change and share under that licence: if you share a changed copy, you share its source under the same licence. The name Skipz and its logo are not part of the licence.
+
+**Commercial licence.** If you want to use Skipz's code in a product that you do not want to release under the GPL, a separate commercial licence is available. Open an issue on this repository titled “Commercial licence”, say in a line how you would use Skipz and how to reach you, and I will reply. Please keep private details out of the issue.
 
 Skipz is not affiliated with or endorsed by YouTube or Google.

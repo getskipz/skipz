@@ -20,7 +20,7 @@ npm run build     # writes dist/, load it unpacked in Chrome
 1. **Start from a real example.** A rule change needs a sentence or a page that really went wrong, copied from a real video. Add it as a test next to the others in `src/detector/lib/sponsor/`.
 2. **Show both directions.** Prove the new rule catches the sponsor it missed and leaves ordinary talk alone. "Collaboration with" in a product launch must stay unmarked. A wrong mark costs more than a missed one.
 3. **Keep it small.** One idea per pull request.
-4. **Sign off your commits** (`git commit -s`). It states that you wrote the change and may share it under the project's licence (the Developer Certificate of Origin).
+4. **Sign off your commits** (`git commit -s`). It states that you wrote the change and may share it under the project's licence (the Developer Certificate of Origin). By sending a change you also agree that it may be offered under Skipz's commercial licence, as well as under the GPL.
 
 ## What we will not accept
 
