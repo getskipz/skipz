@@ -1,6 +1,7 @@
 // The real description lines of videos from the maintainer's tests (2026-11-02), kept inline so this test runs anywhere. The link must be the sponsor's own address from the description, or nothing.
 import { describe, it, expect } from 'vitest';
-import { offerLink, endOffer } from './offerLink';
+import { offerLink } from './offerLink';
+import { endOffer } from './endOffer';
 
 const ABACUS = `Try BrowOs : https://browos.site
 

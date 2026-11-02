@@ -2,7 +2,7 @@
 // a short plug up front and the main read later are two bursts, each marked and each asked about).
 // It never skips on its own unless the person chose that AND the lock in gate.ts is open (the worker reports the mode that is really in force).
 import type { Answer, Ask } from './background';
-import { endOffer } from './offerLink';
+import { endOffer } from './endOffer';
 import type { Burst, Mark } from './verdict'; // types only: a content script cannot import code from another file
 const burstsOfMark = (m: Mark): Burst[] => [{ start: m.start, end: m.end }, ...(m.more ?? [])].reduce<Burst[]>((out, b) => { // the same as in verdict.ts: overlapping bursts are drawn as one
   const hit = out.find((o) => b.start <= o.end && b.end >= o.start);
