@@ -1,7 +1,7 @@
 /// <reference types="vitest/config" />
 import { defineConfig } from 'vite';
 import { resolve } from 'node:path';
-import { readdirSync, unlinkSync } from 'node:fs';
+import { readdirSync, unlinkSync, readFileSync } from 'node:fs';
 
 // The speech runtime brings WebAssembly builds that are never loaded (the worker points at the plain one in public/ort): they are left out of the build.
 const dropUnusedOrt = {
@@ -12,11 +12,24 @@ const dropUnusedOrt = {
   },
 };
 
+// The page script (content.js) and the Capture script (capture.js) are put into the page as plain scripts: they cannot import anything. If the build ever splits shared code out of them, Skipz silently does nothing on every
+// YouTube page. So the build FAILS here instead of producing a dead extension.
+const selfContained = {
+  name: 'skipz-self-contained',
+  closeBundle() {
+    for (const f of ['content.js', 'capture.js']) {
+      let src;
+      try { src = readFileSync(resolve(import.meta.dirname, 'dist', f), 'utf8'); } catch { continue; }
+      if (/^\s*(import|export)\s*[{*"'\w]/m.test(src) || /\bimport\.meta\b/.test(src)) throw new Error('dist/' + f + ' imports another file, which Chrome cannot load in a page script.');
+    }
+  },
+};
+
 // "@detector" is the detector (the code that reads a video's label, description, chapters and captions), kept in src/detector.
 export default defineConfig({
   resolve: { alias: { '@detector': resolve(import.meta.dirname, 'src/detector') } },
   define: { __INDEX_URL__: JSON.stringify(''), __BENCH__: JSON.stringify(false), __SAVE__: JSON.stringify(process.env.SKIPZ_SAVE === '1') },
-  plugins: [dropUnusedOrt],
+  plugins: [dropUnusedOrt, selfContained],
   worker: { format: 'es' },
   build: {
     outDir: 'dist', emptyOutDir: true, target: 'chrome120', modulePreload: { polyfill: false },

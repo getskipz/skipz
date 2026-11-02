@@ -58,9 +58,13 @@ export async function refineWithWhistle(pcm: Float32Array, keywords: string[], o
     const s = await session;
     const loadMs = Date.now() - t0;
     const t1 = Date.now();
+    // The copy of the sound is taken BEFORE the timer starts: when the copy failed (an emptied buffer), the timer was already running with nobody listening, and 40 s later it raised a stray "It took too long" in the panel's error list.
+    const chunk = pcm.slice(0, 16000 * 30); // one pass takes up to 30 s of sound
     let timer: ReturnType<typeof setTimeout> | undefined;
     const late = new Promise<never>((_, no) => { timer = setTimeout(() => no(new Error('It took too long')), o.limitMs ?? LIMIT_MS); });
-    const r = await Promise.race([s.transcribe(pcm.slice(0, 16000 * 30), { language: 'en', keywords: whistleKeywords(keywords), wordTimestamps: true }), late]).finally(() => clearTimeout(timer)); // one pass takes up to 30 s of sound
+    late.catch(() => undefined); // a timer that fires after the answer came is not an error
+    let r;
+    try { r = await Promise.race([s.transcribe(chunk, { language: 'en', keywords: whistleKeywords(keywords), wordTimestamps: true }), late]); } finally { clearTimeout(timer); }
     const text = String(r.text ?? '').trim();
     return isFiller(text) ? { text: '', words: [], ms: Date.now() - t1, loadMs } : { text, words: r.words ?? [], ms: Date.now() - t1, loadMs };
   } catch (e) {

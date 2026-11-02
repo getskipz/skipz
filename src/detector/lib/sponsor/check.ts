@@ -7,7 +7,7 @@
 import { sponsorFromText, brandLink, pointerFromText, pointerTime } from '../sponsorText';
 import { classifyAd } from './signals';
 
-export type Method = 'label' | 'description' | 'pinned' | 'chapters' | 'transcript' | 'captions' | 'listening' | 'comments' | 'ai' | 'watch' | 'needle' | 'sponsorblock';
+export type Method = 'label' | 'description' | 'pinned' | 'chapters' | 'transcript' | 'captions' | 'listening' | 'comments' | 'ai' | 'watch' | 'needle' | 'sponsorblock' | 'ask';
 export type Vote = {
   method: Method;
   said: 'yes' | 'no' | 'unknown'; // does this method think a brand paid for the video?
@@ -27,7 +27,7 @@ export type Vote = {
 };
 
 export const METHOD_NAME: Record<Method, string> = {
-  label: "YouTube's label", description: 'Description', pinned: 'Pinned comment', chapters: 'Chapters', transcript: 'Transcript', captions: 'Captions (the player’s own track)', listening: 'Listening (what is said, heard on this computer)', comments: "Viewers' comments (hint)", ai: 'AI read', watch: 'Clinch', needle: 'Snap (on this computer)', sponsorblock: 'SponsorBlock (viewers)',
+  label: "YouTube's label", description: 'Description', pinned: 'Pinned comment', chapters: 'Chapters', transcript: 'Transcript', captions: 'Captions (the player’s own track)', listening: 'Listening (what is said, heard on this computer)', comments: "Viewers' comments (hint)", ai: 'AI read', watch: 'Clinch', needle: 'Snap (on this computer)', sponsorblock: 'SponsorBlock (viewers)', ask: 'Skipz Ask',
 };
 
 // ---- The methods (pure) -------------------------------------------------------------------------------------------
@@ -283,6 +283,11 @@ export function sponsorSaid(lines: { t: number; text: string }[]): number[] {
 
 export const SHORT_READ = 20; // seconds: a cue-based read shorter than this is stretched (see byTranscript)
 export const MIN_READ = 30;
+// The two spoken cues of a break read (see the bracket in byTranscript). A break: "we're going to take a break really quick", "let's take a quick break", "quick word from". A return: "now let's get back to the show", "welcome back".
+const BREAK_CUE = /\b(?:(?:we(?:'|’)?re|we are|i(?:'|’)?m|i am|we(?:'|’)?ll|let(?:'|’)?s|gonna|going to) (?:(?:going to|gonna) )?take a (?:really |very |real )?(?:quick |short |brief )?break|take a (?:quick |short |brief )?break (?:really |real )?quick|quick break|short break|(?:a |the )?quick word from)\b/i;
+const RETURN_CUE = /\b(?:(?:now )?let(?:'|’)?s (?:get )?back (?:to|into) (?:the|our) (?:show|video|episode|topic|conversation|discussion)|back to the (?:show|video|episode)|and we(?:'|’)?re back|welcome back)\b/i;
+const BRACKET_BEFORE = 300; // seconds a break cue may come before the first selling line
+const BRACKET_AFTER = 150; // seconds a return cue may come after the last one
 export function byTranscript(t: { state: 'ok'; lines: { t: number; text: string }[] } | { state: 'none' } | { state: 'timeout'; why?: string } | { state: 'reading' } | null, brands: string[]): Vote {
   if (!t) return { method: 'transcript', said: 'unknown', score: 0, proof: 'Not read yet' };
   if (t.state === 'reading') return { method: 'transcript', said: 'unknown', score: 0, proof: "Reading YouTube's transcript…" };
@@ -402,14 +407,28 @@ export function byTranscript(t: { state: 'ok'; lines: { t: number; text: string 
     for (let k = s - 1; k >= 0 && k >= s - 3 && lines[s].t - lines[k].t <= 15; k--) if (classifyAd(lines[k].text).hits.some((h) => h.signal === 'transition' || h.signal === 'adMarker')) start = k;
     brand = brandOf(lines.slice(main.first, main.last + 1).map((l) => l.text).join(' ')) ?? brand;
   } else if (main !== own) start = main.first;
+  // A BREAK AND A RETURN, said out loud (Mars Men, 2026-11-02, the real lines: "we're going to take a break really quick" at 16:29, two minutes of product talk, the call to action at 18:10, "now let's get back to the show" at 18:27;
+  // the detector had started at the call to action, 100 s late). When the brand is known, named between them, and BOTH cues are there, the read runs from the break cue to the return cue: the creator's own words say where it begins and ends.
+  const two = (k: number) => lines[k].text + ' ' + (lines[k + 1]?.text ?? '');
+  const lastIdx0 = Math.max(main.last, start);
+  let brStart = -1, brEnd = -1;
+  if (brand) {
+    for (let k = start; k >= 0 && lines[start].t - lines[k].t <= BRACKET_BEFORE; k--) if (BREAK_CUE.test(two(k)) && !BREAK_CUE.test(lines[k - 1] ? two(k - 1) : '')) { brStart = !BREAK_CUE.test(lines[k].text) && lines[k + 1] && BREAK_CUE.test(lines[k + 1].text) ? k + 1 : k; break; } // the line that holds the phrase, not the one before it
+    if (brStart >= 0 && brStart < start) {
+      const named = lines.slice(brStart, start + 1).some((l) => mentions(l.text, brand!));
+      for (let k = lastIdx0; named && k < lines.length && lines[k].t - lines[lastIdx0].t <= BRACKET_AFTER; k++) if (RETURN_CUE.test(two(k))) { brEnd = !RETURN_CUE.test(lines[k].text) && lines[k + 1] && RETURN_CUE.test(lines[k + 1].text) ? k + 1 : k; break; }
+    }
+    if (brStart < 0 || brStart >= start || brEnd < 0) { brStart = -1; brEnd = -1; }
+  }
+  if (brStart >= 0) start = brStart;
   const t0 = lines[start].t;
   const burstEnd = (b: Burst) => lines[b.last + 1]?.t ?? lines[b.last].t + 5;
   const last = Math.max(main.last, start);
-  const rawEnd = lines[last + 1]?.t ?? lines[last].t + 5;
+  const rawEnd = brEnd >= 0 ? lines[brEnd].t : lines[last + 1]?.t ?? lines[last].t + 5;
   // A spoken cue starts a read that lasts a good while, but the reading closes it at the last line that sells or names the brand (2026-10-22, real videos: "is Macroscope, the sponsor of today's video" at 5:38 ended at 5:40,
   // "they're sponsoring this part of the video" at 6:07 ended at 6:08: the creator then describes the product with no sales line, and the captions misspell the name). A cue-based read that looks shorter than
   // SHORT_READ seconds is shown as MIN_READ seconds (never past the last caption line), and the proof says the length is a guess.
-  const stretched = !bySignals && !heardAs && rawEnd - lines[start].t < SHORT_READ;
+  const stretched = brEnd < 0 && !bySignals && !heardAs && rawEnd - lines[start].t < SHORT_READ;
   const end = stretched ? Math.max(rawEnd, Math.min(lines[start].t + MIN_READ, lines[lines.length - 1].t + 5)) : rawEnd;
   const segments = real.map((b) => ({ start: lines[b.first].t, end: burstEnd(b) })).slice(0, 5);
   const clip = (s: string) => (s.length > 90 ? s.slice(0, 87) + '…' : s);
@@ -418,7 +437,7 @@ export function byTranscript(t: { state: 'ok'; lines: { t: number; text: string 
     score: bySignals ? (brand ? 0.65 : 0.5) : heardAs ? 0.75 : brand ? 0.9 : 0.7,
     ...(heardAs ? { late: true } : {}),
     ...(segments.length > 1 ? { segments } : {}),
-    proof: 'Said at ' + clock(t0) + ': “' + clip(around(start)) + '”' + (bySignals ? ' (ad signs: ' + bySignals + ')' : '') + (heardAs ? ' (“' + heardAs + '” is how YouTube’s captions spelled ' + brand + ')' : '') + saidNote + (stretched && end > rawEnd ? ' · length is a guess: the lines after the cue do not sell or name the brand' : ''),
+    proof: 'Said at ' + clock(t0) + ': “' + clip(around(start)) + '”' + (brEnd >= 0 ? ' (to “' + clip(lines[brEnd].text) + '” at ' + clock(lines[brEnd].t) + ': the creator says where the break starts and where the show returns)' : '') + (bySignals ? ' (ad signs: ' + bySignals + ')' : '') + (heardAs ? ' (“' + heardAs + '” is how YouTube’s captions spelled ' + brand + ')' : '') + saidNote + (stretched && end > rawEnd ? ' · length is a guess: the lines after the cue do not sell or name the brand' : ''),
     mentions: said,
   };
 }
@@ -528,14 +547,15 @@ export function combine(votes: Vote[]): Verdict {
   const cands: { brand: string; by: Vote[] }[] = [];
   // Only a "yes" starts a candidate; an unsure mention (an offer link without a label) can only back one.
   for (const v of [...votes].sort((a, b) => b.score - a.score)) {
-    if (!v.brand || v.said !== 'yes') continue;
+    if (!v.brand || v.said !== 'yes' || v.method === 'ask') continue; // YouTube's Ask can only back another check, never start an answer by itself
     const c = cands.find((x) => same(x.brand, v.brand!));
     if (c) c.by.push(v);
     else cands.push({ brand: v.brand, by: [v] });
   }
-  const somebodySaidYes = votes.some((v) => v.said === 'yes');
+  const somebodySaidYes = votes.some((v) => v.said === 'yes' && v.method !== 'ask');
   for (const v of votes) {
-    if (v.said !== 'unknown' || !v.brand || !v.score) continue;
+    const askYes = v.method === 'ask' && v.said === 'yes';
+    if ((v.said !== 'unknown' && !askYes) || !v.brand || !v.score) continue;
     const c = cands.find((x) => same(x.brand, v.brand!));
     if (c) c.by.push(v);
     // Another method proved there IS an ad but could not name it (viewers' times, the label): the offer link names it.
@@ -548,7 +568,7 @@ export function combine(votes: Vote[]): Verdict {
   const scored = cands.map((c) => ({ ...c, p: orSum([...c.by.map((v) => v.score), ...(label ? [0.3] : [])]) })).sort((a, b) => b.p - a.p);
   const top = scored[0] ?? null;
   const noes = opinions.filter((v) => v.said === 'no');
-  const yesNoBrand = opinions.filter((v) => v.said === 'yes' && !v.brand);
+  const yesNoBrand = opinions.filter((v) => v.said === 'yes' && !v.brand && v.method !== 'ask');
   const sponsored = !!top || yesNoBrand.length > 0;
   // "no" votes pull the confidence down; a rival brand does too.
   const rival = scored[1]?.p ?? 0;
@@ -580,7 +600,7 @@ export function combine(votes: Vote[]): Verdict {
 }
 
 /** The order the "All checks" list shows its rows in (maintainer, 2026-10-14): the label, the description, Clinch with Gemini, the transcript, Snap, the captions when there are some, chapters, the pinned comment, viewers, then SponsorBlock (bench build only). The AI read is gone (it no longer votes). Display only: the combined answer does not depend on it. */
-export const VOTE_ORDER: Method[] = ['label', 'description', 'watch', 'transcript', 'needle', 'captions', 'listening', 'chapters', 'pinned', 'comments', 'sponsorblock', 'ai'];
+export const VOTE_ORDER: Method[] = ['label', 'description', 'watch', 'transcript', 'needle', 'captions', 'listening', 'chapters', 'pinned', 'comments', 'ask', 'sponsorblock', 'ai'];
 export const inShowOrder = (votes: Vote[]): Vote[] => {
   const rank = (m: Method) => { const i = VOTE_ORDER.indexOf(m); return i < 0 ? VOTE_ORDER.length : i; };
   return votes.map((v, i) => ({ v, i })).sort((a, b) => rank(a.v.method) - rank(b.v.method) || a.i - b.i).map((x) => x.v);

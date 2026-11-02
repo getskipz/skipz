@@ -20,6 +20,7 @@ self.onmessage = async (e: MessageEvent<{ id: number; pcm: Float32Array; ortBase
       wasm.numThreads = 1;
       const t0 = Date.now();
       asr = await pipeline('automatic-speech-recognition', 'onnx-community/moonshine-tiny-ONNX', {
+        revision: 'a6da1241cd305dcd64eab1edbd615f2bb9aabb95', // pinned (2026-11-02 security audit): the model that was tested, not whatever is newest on the host
         dtype: 'q8',
         device: 'wasm',
         progress_callback: (p: unknown) => post({ id, progress: p }),

@@ -91,3 +91,15 @@ describe('Where the ad sits in what was heard', () => {
     expect(findHeardAd('', [], [])).toBeNull();
   });
 });
+
+describe('a sound that was already handed away (the bug on his Chrome, 2026-11-02)', () => {
+  beforeEach(async () => { await closeWhistle(); });
+  it('comes back as an error, and leaves no stray timer that fails later', async () => {
+    const gone = new Float32Array(16000);
+    structuredClone(gone, { transfer: [gone.buffer] }); // the buffer is now empty, exactly as after a worker took it
+    const make: MakeSession = async () => ({ transcribe: async () => ({ text: 'never reached' }), close: async () => undefined });
+    const r = await refineWithWhistle(gone, ['Hark'], { make, limitMs: 40 });
+    expect('error' in r).toBe(true);
+    await new Promise((res) => setTimeout(res, 120)); // longer than the limit: a leftover timer would raise an unhandled rejection here and fail the run
+  });
+});

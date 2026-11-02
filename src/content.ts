@@ -44,9 +44,9 @@ function style() {
 .skipz-chip{position:absolute;left:12px;bottom:64px;z-index:2600;display:flex;align-items:center;gap:6px;box-sizing:border-box;height:40px;padding:0 4px 0 14px;border-radius:999px;background:rgba(0,0,0,.3);color:#eee;font:500 13px/1.2 'YouTube Noto',Roboto,Arial,sans-serif;white-space:nowrap;animation:skipz-in .25s ease-out}
 .skipz-strip{position:absolute;left:0;right:0;bottom:0;height:5px;background:rgba(255,255,255,.18);pointer-events:none;z-index:2500}.skipz-strip .skipz-mark{height:100%}
 @media (max-width:640px){.skipz-chip{left:10px;right:10px;bottom:56px;height:auto;padding:4px 4px 4px 14px;flex-wrap:wrap;justify-content:space-between;border-radius:24px;font-size:14px;background:rgba(0,0,0,.55)}.skipz-chip button{flex:1 1 auto;min-height:44px;font-size:14px}}
-.skipz-chip b{color:#ffd23f}.skipz-chip span{opacity:.75;font-weight:500}
+.skipz-chip b{color:#ffd23f}.skipz-chip span{opacity:.75;font-weight:500}.skipz-chip.tight{padding-left:4px;gap:4px}.skipz-chip.tight button{padding:0 10px;font-size:12.5px}.skipz-chip.tight b,.skipz-chip.tight span{display:none}
 .skipz-chip button{min-height:32px;padding:0 13px;border:0;border-radius:999px;font:600 13px 'YouTube Noto',Roboto,Arial,sans-serif;cursor:pointer}
-.skipz-chip .go{background:#ffd23f;color:#111}.skipz-chip .stay{background:rgba(255,255,255,.14);color:#eee}
+.skipz-chip .go{background:#ffd23f;color:#111}.skipz-chip .stay{background:#fff;color:#000}
 .skipz-chip .save{display:inline-flex;align-items:center;justify-content:center;min-width:32px;padding:0;background:rgba(255,255,255,.14);color:#fff}.skipz-chip .save svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;stroke-linejoin:round}.skipz-chip .save[aria-pressed=true]{color:#ffd23f}.skipz-chip .save[aria-pressed=true] svg{fill:currentColor}
 .skipz-chip button:active{transform:scale(.96)}.skipz-chip button:focus-visible{outline:2px solid #fff;outline-offset:2px}
 @keyframes skipz-in{from{opacity:0}to{opacity:1}}
@@ -108,7 +108,15 @@ function show(html: (c: HTMLElement) => void, forMs = 0) {
 function place() {
   const player = playerBox();
   if (!chip || !player) return;
-  const slot = window.innerWidth > 640 ? freeSlot(player, chip.offsetWidth, chip.offsetHeight) : null;
+  // Full pill first; when the gap is too small (the player is narrow: Skipz's panel open, a small window), the compact pill: just the buttons, without the "Sponsor · 2:03" words. Measured again on every tick, so it follows the player as it resizes.
+  chip.classList.remove('tight');
+  const wide = window.innerWidth > 640;
+  let slot = wide ? freeSlot(player, chip.offsetWidth, chip.offsetHeight) : null;
+  if (!slot && wide) {
+    chip.classList.add('tight');
+    slot = freeSlot(player, chip.offsetWidth, chip.offsetHeight);
+    if (!slot) chip.classList.remove('tight');
+  }
   chip.style.left = slot ? slot.left + 'px' : '';
   chip.style.bottom = slot ? slot.bottom + 'px' : '';
 }
@@ -165,19 +173,21 @@ function ask(b: Burst) {
   stat('asked');
   show((c) => {
     words(c, 'Sponsor', ' · ' + clock(b.end - b.start));
-    c.append(button('Skip it', 'go', () => skip(b)), button('Support me', 'stay', () => { dismissed.add(b.start); supported = true; stat('kept'); chip?.remove(); chip = null; }), ...saveButton(b));
+    c.append(button('Skip it', 'go', () => skip(b)), button('Support me', 'stay', () => { dismissed.add(b.start); supported = true; stat('kept'); chip?.remove(); chip = null; offerNow(10000); }), ...saveButton(b));
   });
 }
 
 // The video has ended and the person pressed "Support me": offer the sponsor's own link (the channel's discount link from the description), opened in a new tab by a click, never by itself.
-function onEnded() {
+// maintainer, 2026-11-02: the sponsor's link shows for 10 seconds right after "Support me" (the moment the person said yes), and again when the video ends.
+function offerNow(ms: number) {
   const offer = endOffer(supported, mark, idOf());
   if (!offer) return;
   show((c) => {
     words(c, 'Thank you', ' for supporting');
     c.append(button('Visit ' + offer.name, 'go', () => { window.open(offer.url, '_blank', 'noopener,noreferrer'); chip?.remove(); chip = null; }), button('Close', 'stay', () => { chip?.remove(); chip = null; }));
-  }, 30000);
+  }, ms);
 }
+function onEnded() { offerNow(30000); }
 
 function tick() {
   if (chip) place();
@@ -313,7 +323,7 @@ function heardAd(l: LiveAd) {
   stat('asked');
   show((c) => {
     words(c, 'Sponsor', ' started');
-    c.append(button('Skip it', 'go', () => void skipAhead()), button('Support me', 'stay', () => { supported = true; stat('kept'); chip?.remove(); chip = null; }), ...saveButton({ start: l.start, end: l.end }));
+    c.append(button('Skip it', 'go', () => void skipAhead()), button('Support me', 'stay', () => { supported = true; stat('kept'); chip?.remove(); chip = null; offerNow(10000); }), ...saveButton({ start: l.start, end: l.end }));
   });
 }
 
@@ -509,6 +519,10 @@ async function open(again = false, force = false) {
 
 // When the extension updates, an open YouTube tab keeps the old copy of this script, cut off from the extension. The worker starts a fresh copy in every open YouTube tab (background.ts, 'startInOpenTabs');
 // the fresh copy tells the old one to stand down (copies from before this event existed cannot hear it, so their leftovers on the page are removed too).
+// YouTube's transcript panel is invisible from its first paint while Skipz reads it (the page carries data-skipz-reading for the whole read); it still lays out, so the reading works.
+if (!document.getElementById('skipz-reading-rule')) { const hr = document.createElement('style'); hr.id = 'skipz-reading-rule'; hr.textContent = 'html[data-skipz-reading] ytd-engagement-panel-section-list-renderer[target-id*="transcript" i],html[data-skipz-reading] ytd-engagement-panel-section-list-renderer[target-id*="macro-markers" i],html[data-skipz-reading] ytd-engagement-panel-section-list-renderer[target-id*="in-this-video" i],html[data-skipz-reading] ytd-engagement-panel-section-list-renderer[target-id*="in_this_video" i]{position:fixed!important;left:0!important;top:0!important;width:420px!important;height:640px!important;opacity:0!important;pointer-events:none!important;z-index:-1!important}'; document.documentElement.appendChild(hr); }
+// A copy of this script left on the page after the extension updated cannot reach the extension any more; its failed calls are not errors worth listing (chrome://extensions > Errors showed a pile of them, 2026-11-02).
+window.addEventListener('unhandledrejection', (e) => { if (/context invalidated/i.test(String((e.reason as Error | undefined)?.message ?? e.reason))) e.preventDefault(); });
 const RETIRE = 'skipz-retire';
 document.dispatchEvent(new CustomEvent(RETIRE));
 document.querySelectorAll('.skipz-chip,.skipz-mark,.skipz-strip,#skipz-style').forEach((e) => e.remove());
