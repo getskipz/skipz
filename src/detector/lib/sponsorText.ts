@@ -103,10 +103,13 @@ function siteOf(line: string): string | null {
 // With YouTube's paid promotion label on, an ad is certain; the first outside brand link near the top (no ad words
 // needed) is then the likely payer (maintainer, 2026-10-01: "Why not add the name of sponsor instead of digging for it").
 // own: the channel's name and handle, so the creator's own website is not taken for the sponsor.
+const OWN_OFFER = /\b(?:apply (?:here|now|today)|book (?:a|your) (?:free )?(?:strategy |discovery )?call|work with me|join my|enroll(?:ment)?)\b/i;
 export function brandLink(description: string | null | undefined, own: (string | null | undefined)[] = []): TextSponsor | null {
   if (!description) return null;
   const mine = own.filter((x): x is string => !!x).map((x) => x.toLowerCase().replace(/[^a-z0-9]/g, '')).filter((x) => x.length > 2);
   for (const line of description.split(/\n+/).map((l) => l.trim()).filter(Boolean).slice(0, 6)) {
+    // The creator's OWN funnel is not who paid (Lara Acosta, 9QiqofqNHq8: "If you want clients from LinkedIn, apply here: app.literallyacademy.com" was taken for the sponsor; HubSpot's link was the next line).
+    if (OWN_OFFER.test(line)) continue;
     for (const m of line.matchAll(/https?:\/\/([^\s/?#]+)/gi)) {
       const host = m[1].toLowerCase().replace(/^www\./, '');
       if (isOwn(host)) continue;
@@ -117,7 +120,8 @@ export function brandLink(description: string | null | undefined, own: (string |
       // with ("Crusoe" for crusoecloud.com, maintainer's screenshot 2026-10-04: the card said "Cruso"/"Crusoecloud").
       const words = line.split(/[^\w&'-]+/);
       const written = words.find((w) => /[A-Z]/.test(w) && w.toLowerCase().replace(/[^a-z0-9]/g, '') === main) ??
-        words.find((w) => /^[A-Z]/.test(w) && w.length >= 4 && main.startsWith(w.toLowerCase().replace(/[^a-z0-9]/g, '')));
+        words.find((w) => /^[A-Z]/.test(w) && w.length >= 4 && main.startsWith(w.toLowerCase().replace(/[^a-z0-9]/g, ''))) ??
+        words.find((w) => /^[A-Z]/.test(w) && w.length >= 5 && main.includes(w.toLowerCase().replace(/[^a-z0-9]/g, ''))); // "Get Hubspot’s database: clickhubspot.com/…"
       const named = written && VERB_WORD.test(written) ? (afterVerb(line) ?? written) : written; // "Play War Thunder now with my links": War Thunder, not Play
       return { brand: named && /[A-Z]/.test(named) ? named : main.charAt(0).toUpperCase() + main.slice(1), line: clip(line), how: 'link', site: host, door: doorWord(doorOfLine(line)) };
     }

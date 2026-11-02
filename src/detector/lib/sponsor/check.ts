@@ -281,6 +281,8 @@ export function sponsorSaid(lines: { t: number; text: string }[]): number[] {
   return out;
 }
 
+// A thank-you at the END of a read: "thank you to HubSpot for sponsoring this video" (said after the pitch, not before it).
+export const CLOSING_THANKS = /\bthank(?:s| you)\b[^.?!]{0,40}\bfor\s+(?:sponsoring|supporting|partnering)\b/i;
 export const SHORT_READ = 20; // seconds: a cue-based read shorter than this is stretched (see byTranscript)
 export const MIN_READ = 30;
 // The two spoken cues of a break read (see the bracket in byTranscript). A break: "we're going to take a break really quick", "let's take a quick break", "quick word from". A return: "now let's get back to the show", "welcome back".
@@ -300,11 +302,15 @@ export function byTranscript(t: { state: 'ok'; lines: { t: number; text: string 
   const around = (i: number) => lines.slice(i, i + 3).map((l) => l.text).join(' ');
   let start = -1;
   let brand: string | null = null;
+  let closing = -1; // the line of a closing thank-you ("thank you to HubSpot for sponsoring this video"): the read is BEFORE it
   for (let i = 0; i < lines.length; i++) {
     const near = around(i);
     if (cue(lines[i].text) || (cue(near) && !cue(around(i + 1)))) {
       start = i;
-      brand = brandOf(near) ?? nameAfterCue(near) ?? nameBeforeCue(near);
+      // A sentence spans caption lines: "...and thank you to HubSpot" / "for sponsoring this video" (Lara Acosta, 9QiqofqNHq8, 2026-11-02): the name is on the line BEFORE the cue, so the line before is read too.
+      const wide = (lines[i - 1] ? lines[i - 1].text + ' ' : '') + near;
+      brand = brandOf(near) ?? nameAfterCue(near) ?? nameBeforeCue(near) ?? nameAfterCue(wide) ?? nameBeforeCue(wide);
+      if (CLOSING_THANKS.test(wide)) closing = i;
       break;
     }
   }
@@ -421,14 +427,23 @@ export function byTranscript(t: { state: 'ok'; lines: { t: number; text: string 
     if (brStart < 0 || brStart >= start || brEnd < 0) { brStart = -1; brEnd = -1; }
   }
   if (brStart >= 0) start = brStart;
+  // A CLOSING THANK-YOU ends the read, it does not begin it (Lara Acosta, 9QiqofqNHq8: HubSpot named at 7:49, "thank you to HubSpot for sponsoring this video" at 8:33-8:35; the old code started at the thank-you and ran 30 s AFTER it, where there is no ad).
+  // With the brand known, the read starts where the brand is first named in the 90 seconds before the thank-you and ends when the thank-you sentence ends.
+  let closeEnd = -1;
+  if (closing >= 0 && brand && brStart < 0) {
+    let s = closing;
+    for (let k = closing - 1; k >= 0 && lines[closing].t - lines[k].t <= 90; k--) if (mentions(lines[k].text, brand)) s = k;
+    if (s < start) start = s;
+    closeEnd = lines[closing + 1]?.t ?? lines[closing].t + 4;
+  }
   const t0 = lines[start].t;
   const burstEnd = (b: Burst) => lines[b.last + 1]?.t ?? lines[b.last].t + 5;
   const last = Math.max(main.last, start);
-  const rawEnd = brEnd >= 0 ? lines[brEnd].t : lines[last + 1]?.t ?? lines[last].t + 5;
+  const rawEnd = brEnd >= 0 ? lines[brEnd].t : closeEnd >= 0 ? closeEnd : lines[last + 1]?.t ?? lines[last].t + 5;
   // A spoken cue starts a read that lasts a good while, but the reading closes it at the last line that sells or names the brand (2026-10-22, real videos: "is Macroscope, the sponsor of today's video" at 5:38 ended at 5:40,
   // "they're sponsoring this part of the video" at 6:07 ended at 6:08: the creator then describes the product with no sales line, and the captions misspell the name). A cue-based read that looks shorter than
   // SHORT_READ seconds is shown as MIN_READ seconds (never past the last caption line), and the proof says the length is a guess.
-  const stretched = brEnd < 0 && !bySignals && !heardAs && rawEnd - lines[start].t < SHORT_READ;
+  const stretched = brEnd < 0 && closeEnd < 0 && !bySignals && !heardAs && rawEnd - lines[start].t < SHORT_READ;
   const end = stretched ? Math.max(rawEnd, Math.min(lines[start].t + MIN_READ, lines[lines.length - 1].t + 5)) : rawEnd;
   const segments = real.map((b) => ({ start: lines[b.first].t, end: burstEnd(b) })).slice(0, 5);
   const clip = (s: string) => (s.length > 90 ? s.slice(0, 87) + '…' : s);
