@@ -188,6 +188,8 @@ function offerNow(ms: number) {
   }, ms);
 }
 function onEnded() { offerNow(30000); }
+// "Support" mode (and the same as pressing "Support me"): counted once, then the sponsor's link for 10 seconds.
+function supportNow() { supported = true; stat('kept'); offerNow(10000); }
 
 function tick() {
   if (chip) place();
@@ -197,6 +199,7 @@ function tick() {
   const b = bursts.find((x) => !dismissed.has(x.start) && t >= x.start - LEAD && t < x.end - 1);
   if (!b) { if (chip && !bursts.some((x) => t >= x.start - LEAD && t < x.end)) { chip.remove(); chip = null; } return; }
   if (mode === 'skip' && t >= b.start) skip(b); // only reachable when the lock is open and the person chose it
+  else if (mode === 'support') { if (t >= b.start) { dismissed.add(b.start); supportNow(); } } // the person chose to support: never skipped, never asked
   else if (!chip) ask(b);
 }
 
@@ -320,6 +323,7 @@ function heardAd(l: LiveAd) {
   if (handledAd || mode === 'off') return;
   handledAd = true;
   if (mode === 'skip') { void skipAhead(); return; }
+  if (mode === 'support') { supportNow(); return; }
   stat('asked');
   show((c) => {
     words(c, 'Sponsor', ' started');

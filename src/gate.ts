@@ -31,6 +31,7 @@ export function backfillGate(a: { indexUrl: string; agreed: string | null; lookB
   return { open: true, why: null };
 }
 
-export type Mode = 'off' | 'ask' | 'skip';
+// 'support' (maintainer, 2026-11-02, the popup: "we need support and skip option"): never skips; when a sponsor starts it behaves as if the person had pressed "Support me" (the sponsor's own link shows for 10 seconds, and again at the end). Nothing opens by itself.
+export type Mode = 'off' | 'ask' | 'skip' | 'support';
 /** The mode that is really used: "skip" falls back to "ask" while the lock is shut, whatever was stored. */
 export const effectiveMode = (mode: Mode, m: Measured = MEASURED, unlocked: boolean = MAINTAINER_UNLOCKED): Mode => (mode === 'skip' && !unlocked && !skipGate(m).open ? 'ask' : mode);

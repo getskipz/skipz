@@ -15,6 +15,7 @@ describe('the skip lock', () => {
   it('turns a stored "skip" back into "ask" while it is shut', () => {
     expect(effectiveMode('skip', undefined, false)).toBe('ask');
     expect(effectiveMode('skip', ok, false)).toBe('skip');
+    expect(effectiveMode('support', undefined, false), 'support never needs the lock: it never skips').toBe('support');
     expect(effectiveMode('skip')).toBe('skip'); // the maintainer opened the lock on 2026-10-22
     expect(effectiveMode('off')).toBe('off');
   });

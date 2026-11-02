@@ -1,4 +1,4 @@
-// The toolbar popup. First time: one screen, one button ("I agree"). After that: three big choices (Ask me / Skip by itself / Off), the numbers so far, and a copy button for support.
+// The toolbar popup. First time: one screen, one button ("I agree"). After that: four big choices (Ask me / Skip by itself / Support the creator / Off), the numbers so far, and a copy button for support.
 import { loadSettings, saveSettings, loadStats, type Stats } from './settings';
 import { skipGate, effectiveMode, type Mode } from './gate';
 import { INDEX_URL } from './sharedList';
@@ -53,10 +53,11 @@ async function render() {
     el('div', { class: 'modes' },
       choice('ask', now, 'Ask me before skipping', 'Marks the sponsor, then asks: Skip it?', pick),
       choice('skip', now, 'Don’t ask me before skipping', 'Skips the sponsor by itself. Undo is one tap.', pick),
+      choice('support', now, 'Support the creator', 'Never skips. Shows the sponsor’s link for 10 seconds, and again at the end.', pick),
       choice('off', now, 'Don’t skip', 'Skipz does nothing', pick),
     ),
     ...(typeof chrome.offscreen?.createDocument === 'function' ? [el('div', { class: 'modes' }, listenRow(s.listen !== 'no', (yes) => { void saveSettings({ listen: yes ? 'yes' : 'no' }).then(render); }, (await chrome.storage.local.get('listenStatus')).listenStatus as { state: string; pct: number; at: number } | undefined))] : []), // browsers without the hidden page (Firefox) have no listening
-    el('div', { class: 'nums' }, ...(['checked', 'marked', 'skipped'] as (keyof Stats)[]).map((k) => el('div', {}, el('b', {}, String(stats[k])), el('span', {}, k === 'checked' ? 'looked at' : k === 'marked' ? 'marked' : 'skipped')))),
+    el('div', { class: 'nums' }, ...(['checked', 'marked', 'skipped', 'kept'] as (keyof Stats)[]).map((k) => el('div', {}, el('b', {}, String(stats[k])), el('span', {}, k === 'checked' ? 'looked at' : k === 'marked' ? 'marked' : k === 'kept' ? 'supported' : 'skipped')))),
     ...(stats.marked > 0 ? [el('p', { class: 'muted' }, 'Found before the sponsor began: ' + Math.max(0, stats.marked - stats.late) + ' of ' + stats.marked)] : []),
     el('p', { class: 'muted' }, 'Skipz reads the video’s captions and description and listens to every video, all on your computer. Nothing about you or your videos is sent anywhere.'),
     el('button', { class: 'link', type: 'button', onclick: async (e: Event) => { await navigator.clipboard.writeText(JSON.stringify({ version: chrome.runtime.getManifest().version, settings: s, stats, lastCheck: (await chrome.storage.local.get('lastCheck')).lastCheck ?? null, skipLockMissing: gate.missing, indexSet: !!INDEX_URL }, null, 2)); (e.target as HTMLElement).textContent = 'Copied'; } }, 'Copy info for support'),

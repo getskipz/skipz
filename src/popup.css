@@ -18,7 +18,7 @@ p{margin:0}.muted{color:var(--muted);font-size:13px}.fine{color:var(--muted);fon
 .mode[disabled]{opacity:.7;cursor:not-allowed}
 .bar{height:6px;border-radius:3px;background:var(--hair);overflow:hidden;margin-top:6px}
 .bar i{display:block;height:100%;background:var(--pop);border-radius:3px}
-.nums{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.nums{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
 .nums div{padding:14px 8px;border-radius:16px;background:var(--card);text-align:center}
 .nums b{display:block;font-size:24px;line-height:1.1;margin-bottom:2px}.nums span{font-size:13px;color:var(--muted);white-space:nowrap}
 .go{min-height:48px;border:0;border-radius:999px;background:var(--ink);color:var(--bg);font:600 16px system-ui,sans-serif;cursor:pointer}

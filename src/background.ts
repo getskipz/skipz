@@ -9,7 +9,7 @@ import type { ItTranscript } from '@detector/lib/youtube/innertube';
 import { loadSettings, saveSettings, bump, type Listen } from './settings';
 import { needleCandidates } from '@detector/lib/ai/needle';
 import type { NeedleRead } from '@detector/lib/ai/needle';
-import { effectiveMode } from './gate';
+import { effectiveMode, type Mode } from './gate';
 
 import { verdictOf, decide, type Mark } from './verdict';
 import { askIndex, sendFinding, INDEX_URL } from './sharedList';
@@ -22,7 +22,7 @@ export type Ask = { type: 'check'; videoId: string; url: string; capText?: strin
 // noCaptions: no caption could be read, so the page may LISTEN to the video instead (listen says whether the person agreed to that); known: the brands the page already names (the second ear spells them right)
 // debug: a short record of what the check did and how long each step took, shown on the page as the attribute data-skipz (and in "Copy info for support"), so a slow or empty check can be seen without guessing
 export type Debug = { cached?: boolean; ver?: string; via?: string; earlyMs?: number; earlyWhy?: string; calls?: string[]; pingMs?: number; pageMs?: number; captionsMs?: number; totalMs?: number; page?: string; captions?: string; why?: string; sponsored?: boolean; conf?: number; start?: number | null; end?: number | null; votes?: string[]; error?: string; probable?: string };
-export type Answer = { debug?: Debug; mark: Mark | null; mode: 'off' | 'ask' | 'skip'; found?: string; retry?: boolean; noCaptions?: boolean; listen?: Listen; known?: string[] };
+export type Answer = { debug?: Debug; mark: Mark | null; mode: Mode; found?: string; retry?: boolean; noCaptions?: boolean; listen?: Listen; known?: string[] };
 
 // This session's answers, so a video is read once. An INCOMPLETE answer (no captions read, or a sponsor found without times) is kept only for RETRY_AFTER and tried again, up to TRIES times:
 // the first try can be too early (a video 43 minutes old may have no captions yet), and one refusal must not decide a video for good (2026-10-22, the Fireship video).
