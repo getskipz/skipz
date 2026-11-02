@@ -430,7 +430,9 @@ export function byTranscript(t: { state: 'ok'; lines: { t: number; text: string 
   // A CLOSING THANK-YOU ends the read, it does not begin it (Lara Acosta, 9QiqofqNHq8: HubSpot named at 7:49, "thank you to HubSpot for sponsoring this video" at 8:33-8:35; the old code started at the thank-you and ran 30 s AFTER it, where there is no ad).
   // With the brand known, the read starts where the brand is first named in the 90 seconds before the thank-you and ends when the thank-you sentence ends.
   let closeEnd = -1;
-  if (closing >= 0 && brand && brStart < 0) {
+  // Only when the brand is NOT named again in the 30 seconds after it: Fish Audio's "huge thank you to Fish Audio for supporting this build" (Creator Magic, 7HAVLICDQXI) comes at the START of its read, and "your Fish Audio API key" follows 17 s later.
+  const goesOn = closing >= 0 && !!brand && lines.slice(closing + 1).some((l) => l.t - lines[closing].t <= 30 && mentions(l.text, brand!));
+  if (closing >= 0 && brand && brStart < 0 && !goesOn) {
     let s = closing;
     for (let k = closing - 1; k >= 0 && lines[closing].t - lines[k].t <= 90; k--) if (mentions(lines[k].text, brand)) s = k;
     if (s < start) start = s;
