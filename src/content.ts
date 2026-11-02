@@ -9,13 +9,13 @@ const burstsOfMark = (m: Mark): Burst[] => [{ start: m.start, end: m.end }, ...(
   return out;
 }, []);
 
-// A bookmark after "Keep watching" that saves the sponsor to look at later (maintainer, 2026-10-22: "hide for now, it'll be used in the future"). Built but OFF: the build turns it on with SKIPZ_SAVE=1.
+// A bookmark after "Support me" that saves the sponsor to look at later (maintainer, 2026-10-22: "hide for now, it'll be used in the future"). Built but OFF: the build turns it on with SKIPZ_SAVE=1.
 declare const __SAVE__: boolean;
 const LEAD = 7; // seconds before a burst when the question appears (maintainer, 2026-10-24: 'show 7 seconds before the sponsor segment')
 let mark: Mark | null = null;
 let bursts: Burst[] = [];
 let mode: Answer['mode'] = 'ask';
-const dismissed = new Set<number>(); // bursts ("Keep watching" or an Undo) the person has answered on this video, by their start
+const dismissed = new Set<number>(); // bursts ("Support me" or an Undo) the person has answered on this video, by their start
 let skippedAt: number | null = null; // where the person was before a skip, for Undo
 let drawn: HTMLElement[] = [];
 let chip: HTMLElement | null = null;
@@ -39,13 +39,13 @@ function style() {
   s.id = 'skipz-style';
   s.textContent = `
 .skipz-mark{position:absolute;top:0;height:100%;background:#ffd23f;opacity:.95;pointer-events:none;z-index:40;border-radius:1px;min-width:3px}
-.skipz-chip{position:absolute;left:12px;bottom:64px;z-index:2600;display:flex;align-items:center;gap:6px;padding:3px 3px 3px 12px;border-radius:999px;background:rgba(17,17,17,.72);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);color:#fff;font:600 12px/1.2 system-ui,sans-serif;box-shadow:0 2px 10px rgba(0,0,0,.3);animation:skipz-in .25s ease-out}
+.skipz-chip{position:absolute;left:12px;bottom:64px;z-index:2600;display:flex;align-items:center;gap:6px;box-sizing:border-box;height:40px;padding:0 4px 0 14px;border-radius:999px;background:rgba(0,0,0,.3);color:#eee;font:500 13px/1.2 'YouTube Noto',Roboto,Arial,sans-serif;white-space:nowrap;animation:skipz-in .25s ease-out}
 .skipz-strip{position:absolute;left:0;right:0;bottom:0;height:5px;background:rgba(255,255,255,.18);pointer-events:none;z-index:2500}.skipz-strip .skipz-mark{height:100%}
-@media (max-width:640px){.skipz-chip{left:10px;right:10px;bottom:56px;flex-wrap:wrap;justify-content:space-between;border-radius:24px;font-size:14px}.skipz-chip button{flex:1 1 auto;min-height:44px;font-size:14px}}
+@media (max-width:640px){.skipz-chip{left:10px;right:10px;bottom:56px;height:auto;padding:4px 4px 4px 14px;flex-wrap:wrap;justify-content:space-between;border-radius:24px;font-size:14px;background:rgba(0,0,0,.55)}.skipz-chip button{flex:1 1 auto;min-height:44px;font-size:14px}}
 .skipz-chip b{color:#ffd23f}.skipz-chip span{opacity:.75;font-weight:500}
-.skipz-chip button{min-height:26px;padding:0 11px;border:0;border-radius:999px;font:600 12px system-ui,sans-serif;cursor:pointer}
-.skipz-chip .go{background:#ffd23f;color:#111}.skipz-chip .stay{background:rgba(255,255,255,.14);color:#fff}
-.skipz-chip .save{display:inline-flex;align-items:center;justify-content:center;min-width:26px;padding:0;background:rgba(255,255,255,.14);color:#fff}.skipz-chip .save svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;stroke-linejoin:round}.skipz-chip .save[aria-pressed=true]{color:#ffd23f}.skipz-chip .save[aria-pressed=true] svg{fill:currentColor}
+.skipz-chip button{min-height:32px;padding:0 13px;border:0;border-radius:999px;font:600 13px 'YouTube Noto',Roboto,Arial,sans-serif;cursor:pointer}
+.skipz-chip .go{background:#ffd23f;color:#111}.skipz-chip .stay{background:rgba(255,255,255,.14);color:#eee}
+.skipz-chip .save{display:inline-flex;align-items:center;justify-content:center;min-width:32px;padding:0;background:rgba(255,255,255,.14);color:#fff}.skipz-chip .save svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;stroke-linejoin:round}.skipz-chip .save[aria-pressed=true]{color:#ffd23f}.skipz-chip .save[aria-pressed=true] svg{fill:currentColor}
 .skipz-chip button:active{transform:scale(.96)}.skipz-chip button:focus-visible{outline:2px solid #fff;outline-offset:2px}
 @keyframes skipz-in{from{opacity:0}to{opacity:1}}
 @media (prefers-reduced-motion:reduce){.skipz-chip{animation:none}}`;
@@ -96,8 +96,33 @@ function show(html: (c: HTMLElement) => void, forMs = 0) {
   chip.setAttribute('role', 'status');
   html(chip);
   player.appendChild(chip);
+  place();
   clearTimeout(hideTimer);
   if (forMs) hideTimer = window.setTimeout(() => { chip?.remove(); chip = null; }, forMs);
+}
+
+// Where the pill sits (maintainer, 2026-11-02, marked rectangle on a screenshot): in the empty space of YouTube's control row, right of the chapter name, so it does not float over the picture. It is only put there when the space is wide enough
+// (and not on a phone-width window); otherwise it keeps the old place above the seek bar. YouTube's own element names are read, never changed.
+function place() {
+  const player = playerBox();
+  if (!chip || !player) return;
+  const slot = window.innerWidth > 640 ? freeSlot(player, chip.offsetWidth, chip.offsetHeight) : null;
+  chip.style.left = slot ? slot.left + 'px' : '';
+  chip.style.bottom = slot ? slot.bottom + 'px' : '';
+}
+function freeSlot(player: HTMLElement, w: number, h: number): { left: number; bottom: number } | null {
+  const controls = player.querySelector<HTMLElement>('.ytp-chrome-controls');
+  const right = player.querySelector<HTMLElement>('.ytp-right-controls');
+  if (!controls || !right || !w) return null;
+  const left = ['.ytp-chapter-container', '.ytp-time-display', '.ytp-volume-area', '.ytp-play-button'].map((s) => player.querySelector<HTMLElement>(s)).filter((e): e is HTMLElement => !!e && e.getBoundingClientRect().width > 0);
+  if (!left.length) return null;
+  const gap = 12;
+  const from = Math.max(...left.map((e) => e.getBoundingClientRect().right));
+  const to = right.getBoundingClientRect().left;
+  if (to - from - 2 * gap < w) return null; // not enough room: keep the old place
+  const pr = player.getBoundingClientRect();
+  const cr = controls.getBoundingClientRect();
+  return { left: from - pr.left + gap, bottom: pr.bottom - (cr.top + cr.height / 2 + h / 2) };
 }
 
 const button = (label: string, cls: string, on: () => void) => { const b = document.createElement('button'); b.type = 'button'; b.className = cls; b.textContent = label; b.addEventListener('click', on); return b; };
@@ -138,11 +163,12 @@ function ask(b: Burst) {
   stat('asked');
   show((c) => {
     words(c, 'Sponsor', ' · ' + clock(b.end - b.start));
-    c.append(button('Skip it', 'go', () => skip(b)), button('Keep watching', 'stay', () => { dismissed.add(b.start); stat('kept'); chip?.remove(); chip = null; }), ...saveButton(b));
+    c.append(button('Skip it', 'go', () => skip(b)), button('Support me', 'stay', () => { dismissed.add(b.start); stat('kept'); chip?.remove(); chip = null; }), ...saveButton(b));
   });
 }
 
 function tick() {
+  if (chip) place();
   const v = video();
   if (!v || !mark || skippedAt !== null || mode === 'off' || mark.live) return; // a sponsor still being heard is handled by heardAd
   const t = v.currentTime;
@@ -275,7 +301,7 @@ function heardAd(l: LiveAd) {
   stat('asked');
   show((c) => {
     words(c, 'Sponsor', ' started');
-    c.append(button('Skip it', 'go', () => void skipAhead()), button('Keep watching', 'stay', () => { stat('kept'); chip?.remove(); chip = null; }), ...saveButton({ start: l.start, end: l.end }));
+    c.append(button('Skip it', 'go', () => void skipAhead()), button('Support me', 'stay', () => { stat('kept'); chip?.remove(); chip = null; }), ...saveButton({ start: l.start, end: l.end }));
   });
 }
 
