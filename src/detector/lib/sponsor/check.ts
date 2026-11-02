@@ -7,7 +7,7 @@
 import { sponsorFromText, brandLink, pointerFromText, pointerTime } from '../sponsorText';
 import { classifyAd } from './signals';
 
-export type Method = 'label' | 'description' | 'pinned' | 'chapters' | 'transcript' | 'captions' | 'comments' | 'ai' | 'watch' | 'needle' | 'sponsorblock';
+export type Method = 'label' | 'description' | 'pinned' | 'chapters' | 'transcript' | 'captions' | 'listening' | 'comments' | 'ai' | 'watch' | 'needle' | 'sponsorblock';
 export type Vote = {
   method: Method;
   said: 'yes' | 'no' | 'unknown'; // does this method think a brand paid for the video?
@@ -20,13 +20,14 @@ export type Vote = {
   ms?: number;
   quote?: string; // viewers' comments: the comment it went by, so the panel can name its writer and open it
   mentions?: number[]; // the transcript: when "sponsor" was said (seconds)
+  denied?: boolean; // the transcript: the creator says the video is not sponsored or that nobody paid, and no ad read was found: that outweighs a paid flag or a product link (see combine)
   who?: string; // which AI service read it, when several did ("Use all" in Checks for this video)
   late?: boolean; // the time is a closing line ("head over to…"), not the ad's start: another check's start goes first
   segments?: { start: number; end: number }[]; // the transcript: every ad burst it found (a short mention up front and the main read later are two); start/end above are the main one
 };
 
 export const METHOD_NAME: Record<Method, string> = {
-  label: "YouTube's label", description: 'Description', pinned: 'Pinned comment', chapters: 'Chapters', transcript: 'Transcript', captions: 'Captions (the player’s own track)', comments: "Viewers' comments (hint)", ai: 'AI read', watch: 'Clinch', needle: 'Snap (on this computer)', sponsorblock: 'SponsorBlock (viewers)',
+  label: "YouTube's label", description: 'Description', pinned: 'Pinned comment', chapters: 'Chapters', transcript: 'Transcript', captions: 'Captions (the player’s own track)', listening: 'Listening (what is said, heard on this computer)', comments: "Viewers' comments (hint)", ai: 'AI read', watch: 'Clinch', needle: 'Snap (on this computer)', sponsorblock: 'SponsorBlock (viewers)',
 };
 
 // ---- The methods (pure) -------------------------------------------------------------------------------------------
@@ -88,7 +89,7 @@ export function byChapters(chapters: { title: string; startSeconds: number }[], 
 
 // Viewers often post the ad's time ("4:31 skip the sponsor"). Times near ad words, the most repeated wins.
 export function byComments(comments: string[] | null, brands: string[], reading = false): Vote {
-  if (comments === null) return { method: 'comments', said: 'unknown', score: 0, proof: reading ? "Reading viewers' comments…" : 'Not read (needs your YouTube key)' };
+  if (comments === null) return { method: 'comments', said: 'unknown', score: 0, proof: reading ? "Reading viewers' comments…" : 'Not read yet' };
   const hits: { start: number; end: number | null; text: string }[] = [];
   for (const raw of comments) {
     const text = raw.replace(/\s+/g, ' ').trim();
@@ -124,8 +125,9 @@ export function byComments(comments: string[] | null, brands: string[], reading 
 // Podcasts and shows say it more ways (maintainer, 2026-10-04: Zapier at 0:17 on The Next New Thing, missed): "our
 // sponsor", "supported by", "presented by", "made possible by", "a word from", "this episode/show/podcast is …".
 // "or getting sponsored by the company who released it" (maintainer's find, 2026-10-21) is a remark, not an ad read: "sponsored by" / "brought to you by" followed by a general noun phrase is no cue.
-export const CUE = /\b(sponsored by(?! (?:the|a|an|some|other|another) (?:company|companies|brands?|people|person|folks|guys)\b)|sponsor(?:ing)? (?:of )?(?:this|today'?s)|brought to you by(?! (?:the|a|an|some|other|another) (?:company|companies|brands?|people|person|folks|guys)\b)|thanks? (?:you )?to [\w .&'-]{2,40}? for (?:sponsoring|supporting|partnering)|in partnership with|partnered with|today'?s sponsor|(?:our|this week'?s|this episode'?s|the) sponsors? (?:today |for today )?(?:is|are)|(?:supported|presented|made possible) by|a (?:quick )?word from (?:our|today'?s|this (?:video|episode|show)'?s?) sponsors?|\w[\w.&'-]* (?:is|are) (?:a|an|our|the|today'?s|this (?:video|episode)'?s) (?:proud )?sponsors?|this (?:video|episode|show|podcast) is (?:sponsored|brought|supported|presented|made possible))\b/i;
-export const SELL = /\b(use (?:my |the )?code|promo code|discount|% off|percent off|link (?:is )?(?:in|down in) (?:the )?description|first link|free trial|sign up|check (?:them|it) out|go to [\w.]+\.(?:com|ai|io|co|app)|dot com|head over to|download (?:the |our |my )?(?:\w+ ){0,2}app|go ahead and (?:download|grab|try|sign)|link (?:is )?below|download (?:\w+ ){0,4}app|(?:get|grab) (?:it )?(?:on|from) (?:your |the )?(?:app ?store|google play)|pick up (?:the )?(?:\w+ ){1,3}app|link (?:is )?(?:in|down in) (?:the )?pinned comment)\b/i;
+// "partnered with" / "in partnership with" count only when the creator or the video is the one partnering (a Theranos story saying "Theranos partnered with Walgreens" marked a false second sponsor, 2026-11-01).
+export const CUE = /\b((?:message|word|ad|break|segment|plug) from (?:our|my|the|today'?s)(?: \w+)? sponsors?|sponsored by(?! (?:the|a|an|some|other|another) (?:company|companies|brands?|people|person|folks|guys)\b)|sponsor(?:ing)? (?:of )?(?:this|today'?s)|brought to you by(?! (?:the|a|an|some|other|another) (?:company|companies|brands?|people|person|folks|guys)\b)|thanks? (?:you )?to [\w .&'-]{2,40}? for (?:sponsoring|supporting|partnering)|(?:(?<=^\s*)|(?<=\b(?:i|we|i'?ve|we'?ve|i'?m|we'?re|i am|we are)\s(?:(?:also|proudly|officially|recently|just|now|been|have|has)\s)*)|(?<=\b(?:video|episode|show|podcast|one) (?:is|was) (?:(?:also|proudly|officially) )*))(?:in )?(?:partnership with|partnered with)|today'?s (?:video |episode |show |podcast )?sponsor|(?:our|this week'?s|this episode'?s|the) sponsors? (?:today |for today )?(?:is|are)|(?:supported|presented|made possible) by|a (?:quick )?word from (?:our|today'?s|this (?:video|episode|show)'?s?) sponsors?|\w[\w.&'-]* (?:is|are) (?:a|an|our|the|today'?s|this (?:video|episode)'?s) (?:proud )?sponsors?|\w[\w.&'-]* (?:is|are) (?:also |kindly |proudly )?sponsoring|(?:my|our|their|the|a) (?:channel |main |longtime |regular )?sponsors? (?!(?:segment|segments|spot|read|reads|message|messages|ad|ads|section|link|for|of|is|are|was|who|which|that|this|today|and|to|in|on|at|but|so|i|we|you|they|if|or|as|it|just|has|have|can|will|would|here|there|then|than|with|by)\b)[a-z0-9][\w.&'-]{2,}|this (?:video|episode|show|podcast) is (?:sponsored|brought|supported|presented|made possible))\b/i;
+export const SELL = /\b(click (?:the |on )?(?:the )?link|[\w-]+\.(?:com|ai|io|co|app|me|net)\/[\w-]+|bonus pack|limited time|better be quick|use (?:my |the )?code|promo code|discount|% off|percent off|links? (?:(?:is|are) )?(?:in|down in) (?:the |my )?(?:video )?description|first link|free trial|sign up|check (?:them|it) out|go to [\w.]+\.(?:com|ai|io|co|app)|dot com|head over to|download (?:the |our |my )?(?:\w+ ){0,2}app|go ahead and (?:download|grab|try|sign)|links? (?:(?:is|are) )?below|download (?:\w+ ){0,4}app|(?:get|grab) (?:it )?(?:on|from) (?:your |the )?(?:app ?store|google play)|pick up (?:the )?(?:\w+ ){1,3}app|links? (?:(?:is|are) )?(?:in|down in) (?:the )?pinned comment)\b/i;
 const words = (s: string) => ' ' + s.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim() + ' ';
 // Captions split a one-word brand in two ("Code Rabbit" for CodeRabbit, Moonshine trial 2026-10-05): a brand of 6+ letters
 // also matches when the text's words run together to spell it.
@@ -135,8 +137,15 @@ const mentions = (text: string, brand: string) => {
   const t = words(text);
   if (t.includes(' ' + b + ' ')) return true;
   const sq = b.replace(/ /g, '');
-  if (sq.length < 6 || b.includes(' ')) return false;
+  if (sq.length < 6) return false;
   const w = t.trim().split(' ');
+  if (b.includes(' ')) {
+    // A brand of several words heard a little differently (maintainer, 2026-10-24: "Pixelmob Pro" came out of the captions as "Pixel Moab Pro"): the same number of words, or one more, that start the same way and are 1 letter off (2 for long names).
+    const k = sq.length >= 12 ? 2 : sq.length >= 8 ? 1 : 0;
+    if (!k) return false;
+    const n = b.split(' ').length;
+    return [n, n + 1].some((len) => w.some((_, i) => { if (i + len > w.length) return false; const s2 = w.slice(i, i + len).join(''); return s2.slice(0, 4) === sq.slice(0, 4) && edits(s2, sq) <= k; }));
+  }
   return w.some((_, i) => w.slice(i, i + 2).join('') === sq || w.slice(i, i + 3).join('') === sq);
 };
 // Auto-captions mishear brand names (maintainer, 2026-10-04: "Kalam" came out as "kadama"). A one-word brand of 4+ letters
@@ -183,9 +192,22 @@ export function isOwnName(brand: string | null | undefined, own: (string | null 
   return own.filter((x): x is string => !!x).map(key).some((o) => o.length >= 3 && (o === b || (Math.min(o.length, b.length) >= 6 && (o.includes(b) || b.includes(o)))));
 }
 /** Votes with the channel's own name taken out as the brand: the vote stays but no longer says a brand paid. */
-export function scrubOwnBrand<T extends { method: string; said: string; brand?: string | null; proof: string }>(votes: T[], own: (string | null | undefined)[]): T[] {
-  return votes.map((v) => (v.method !== 'label' && v.brand && isOwnName(v.brand, own)
+export function scrubOwnBrand<T extends { method: string; said: string; brand?: string | null; proof: string }>(votes: T[], own: (string | null | undefined)[], title?: string | null): T[] {
+  const scrubbed = votes.map((v) => (v.method !== 'label' && v.brand && isOwnName(v.brand, own)
     ? { ...v, brand: null, said: v.said === 'yes' ? 'unknown' : v.said, proof: 'That is the channel\u2019s own name, not a sponsor: ' + v.proof }
+    : v));
+  return title ? scrubReviewedProduct(scrubbed, title) : scrubbed;
+}
+
+/**
+ * A REVIEW is not a sponsorship (maintainer, 2026-10-24, MinimalisTech "I Love That Phones Are Fun Again | Ikko Mind One Pro": "not sponsored. this one is a review"): when the brand a written check names is in the video's TITLE, the video is
+ * about that product, so a chapter named after it or a description link to it proves nothing. Only a label that says paid, or a spoken ad read, can still make it a sponsor; with neither, those written votes stop naming it.
+ */
+export function scrubReviewedProduct<T extends { method: string; said: string; brand?: string | null; proof: string }>(votes: T[], title: string): T[] {
+  if (votes.some((v) => v.method === 'label' && v.said === 'yes') || votes.some((v) => v.method === 'transcript' && v.said === 'yes')) return votes;
+  const t = norm(title);
+  return votes.map((v) => (['description', 'chapters', 'pinned', 'comments', 'needle'].includes(v.method) && v.brand && norm(v.brand).length >= 3 && t.includes(norm(v.brand))
+    ? { ...v, brand: null, said: v.said === 'yes' ? 'unknown' : v.said, proof: 'The video is about this product (its name is in the title), so this is a review unless the label or the spoken read says it was paid: ' + v.proof }
     : v));
 }
 
@@ -193,13 +215,22 @@ export function nameAfterCue(text: string): string | null {
   return spoken(nameAfterCueRaw(text));
 }
 function nameAfterCueRaw(text: string): string | null {
+  // "from my channel sponsor dbrand down in the description" (maintainer's screenshot, 2026-10-26, JerryRigEverything at 7:47): a soft mention, no "sponsored by"; the brand follows the word sponsor.
+  const soft = /\b(?:my|our|their|the|a)\s+(?:channel\s+|main\s+|longtime\s+|regular\s+)?sponsors?\s+(?!(?:segment|segments|spot|read|reads|message|messages|ad|ads|section|link|for|of|is|are|was|who|which|that|this|today|and|to|in|on|at|but|so|i|we|you|they|if|or|as|it|just|has|have|can|will|would|here|there|then|than|with|by)\b)([a-z0-9][\w.&'-]{2,})/i.exec(text);
+  if (soft && !NOT_A_NAME.has(soft[1].toLowerCase())) { const w = soft[1].replace(/[.,'-]+$/, ''); return /[A-Z]/.test(w) ? w : w[0].toUpperCase() + w.slice(1); }
+  // "this is a message from our sponsor, Hacker Blueprint" (XFCE video, 2026-11-02): the brand follows the cue after a comma.
+  const from = /\b(?:message|word|ad|break|segment|plug)\s+from\s+(?:our|my|the|today'?s)\s+(?:\w+\s+)?sponsors?\s*[,:]?\s+([A-Z][\w&'-]*)(?:\s+([A-Z][\w&'-]*))?/.exec(text);
+  if (from && !NOT_A_NAME.has(from[1].toLowerCase()) && from[1].length >= 3) return from[1].replace(/[.,'-]+$/, '') + (from[2] && !/[.!?,;:]$/.test(from[1]) && !NOT_A_NAME.has(from[2].toLowerCase()) ? ' ' + from[2].replace(/[.,'-]+$/, '') : '');
+  // "let me introduce you to today's sponsor, Abacus AI Agent" (Allysun's BrowOS video, 2026-11-02): the brand follows "today's sponsor" after a comma, "is" or "was". Capitalised names only, at most two words.
+  const today = /\btoday'?s\s+(?:video\s+)?sponsor(?:\s+(?:is|was))?\s*[,:]?\s+([A-Z][\w&'-]*)(?:\s+([A-Z][\w&'-]*))?/.exec(text);
+  if (today && !NOT_A_NAME.has(today[1].toLowerCase()) && today[1].length >= 3) return today[1].replace(/[.,'-]+$/, '') + (today[2] && !/[.!?,;:]$/.test(today[1]) && !NOT_A_NAME.has(today[2].toLowerCase()) ? ' ' + today[2].replace(/[.,'-]+$/, '') : '');
   // "thanks to Notion for sponsoring this episode": the brand sits between the two (Moonshine trial, 2026-10-05).
-  const th = /thanks? (?:you )?to\s+([a-z0-9][\w.&'-]*)(?:\s+([a-z0-9][\w.&'-]*))?\s+for\s+(?:sponsoring|supporting|partnering)/i.exec(text);
+  const th = /thanks? (?:you )?(?:to\s+)?([a-z0-9][\w.&'-]*)(?:\s+([a-z0-9][\w.&'-]*))?\s+for\s+(?:sponsoring|supporting|partnering)/i.exec(text);
   if (th && !NOT_A_NAME.has(th[1].toLowerCase()) && th[1].length >= 3) {
     const up = (w: string) => (/[A-Z]/.test(w) ? w : w[0].toUpperCase() + w.slice(1));
     return up(th[1].replace(/[.,'-]+$/, '')) + (th[2] && !NOT_A_NAME.has(th[2].toLowerCase()) ? ' ' + up(th[2]) : '');
   }
-  const m = /(?:sponsored by|brought to you by|(?:in |paid )?partnership with|partnered with|(?:supported|presented|made possible) by|sponsors? (?:today |for today )?(?:is|are)|word from (?:our|today'?s|this (?:video|episode|show)'?s?) sponsors?,?)\s+(?:(?:our|my|the) (?:good )?(?:friends|folks|team|people) (?:over )?at\s+)?([a-z0-9][\w.&'-]*)(?:\s+([a-z0-9][\w.&'-]*))?/i.exec(text);
+  const m = /(?:sponsored by|brought to you by|paid partnership with|(?:(?<=^\s*)|(?<=\b(?:i|we|i'?ve|we'?ve|i'?m|we'?re|i am|we are)\s(?:(?:also|proudly|officially|recently|just|now|been|have|has)\s)*)|(?<=\b(?:video|episode|show|podcast|one) (?:is|was) (?:(?:also|proudly|officially) )*))(?:in )?(?:partnership with|partnered with)|(?:supported|presented|made possible) by|sponsors? (?:today |for today )?(?:is|are)|word from (?:our|today'?s|this (?:video|episode|show)'?s?) sponsors?,?)\s+(?:(?:our|my|the) (?:good )?(?:friends|folks|team|people) (?:over )?at\s+)?([a-z0-9][\w.&'-]*)(?:\s+([a-z0-9][\w.&'-]*))?/i.exec(text);
   if (!m || NOT_A_NAME.has(m[1].toLowerCase()) || m[1].length < 3) return null;
   const two = m[2] && !/[.!?,;:]$/.test(m[1]) && !NOT_A_NAME.has(m[2].toLowerCase()) && /^[A-Z]/.test(m[2]) && /^[A-Z]/.test(m[1]) ? ' ' + m[2] : ''; // "sponsored by Squarespace. Go to …": a full stop ends the name
   const cap = (w: string) => (/[A-Z]/.test(w) ? w : w[0].toUpperCase() + w.slice(1));
@@ -217,14 +248,22 @@ export function nameBeforeCue(text: string): string | null {
   return spoken(nameBeforeCueRaw(text));
 }
 function nameBeforeCueRaw(text: string): string | null {
-  const m = /([a-z0-9][\w.&'-]*)\s+(?:is|are)\s+(?:a|an|our|the|today'?s|this (?:video|episode)'?s)\s+(?:proud\s+)?sponsors?\b/i.exec(text);
+  // "Squarespace are sponsoring this video" (maintainer, 2026-10-26: "are sponsoring", "are Sponsoring", "are SPONSORING"; the pattern ignores case)
+  // "There's also no excuse to not play War Thunder, today's video sponsor." (Salem Techsperts, 2026-11-01): the name, then the cue, with no "is".
+  const before = /\b([A-Z][\w.&'-]*(?:\s+[A-Z][\w.&'-]*)?)\s*,\s*(?:today'?s|this (?:video|episode|show)'?s)\s+(?:video\s+|episode\s+|show\s+)?(?:proud\s+)?sponsors?\b/.exec(text);
+  if (before && !NOT_A_NAME.has(before[1].toLowerCase()) && before[1].length >= 3) return before[1];
+  const m = /([a-z0-9][\w.&'-]*)\s+(?:is|are)\s+(?:(?:a|an|our|the|today'?s|this (?:video|episode)'?s)\s+(?:proud\s+)?sponsors?|(?:also\s+|kindly\s+|proudly\s+)?sponsoring)\b/i.exec(text);
   if (!m || NOT_A_NAME.has(m[1].toLowerCase()) || /^(?:it|this|that|he|she|which|who|what|there|here)$/i.test(m[1]) || m[1].length < 3) return null;
   return /[A-Z]/.test(m[1]) ? m[1] : m[1][0].toUpperCase() + m[1].slice(1);
 }
 
 // The times "sponsor" (sponsored, sponsoring, sponsors) is said; a word split across two caption lines counts once.
 // A line that says the opposite ("they're not the sponsor of this video", "this video is not sponsored", "no sponsor", "unsponsored", maintainer's screenshot 2026-10-10) is never an ad cue.
-export const NEGATED_SPONSOR = /\b(?:not|n't|never|no|without)\s+(?:\w+\s+){0,3}?sponsor|\b(?:un|non)-?sponsored\b/i;
+// The creator says it is NOT paid (maintainer, 2026-11-01, the Jet KVM Mini review: "this video is not sponsored ... they didn't pay me", after being sent free units; YouTube's flag still counted it as paid promotion).
+const SPONSOR_DENIAL = /\b(?:video|episode|review)\s+(?:is\s+not|isn'?t|was\s+not|wasn'?t)\s+(?:\w+\s+){0,1}?(?:sponsored|paid)\b|\b(?:not|isn'?t|wasn'?t)\s+sponsored\b|\bunsponsored\b/i;
+const PAY_DENIAL = /\b(?:didn'?t|did\s+not|never|haven'?t|have\s+not|hasn'?t|has\s+not|won'?t|not)\s+(?:even\s+)?(?:\w+\s+){0,1}?(?:pay|paid)\s+me\b|\b(?:nobody|no\s+one|no\s+company)\s+paid\s+me\b|\bpaid\s+me\s+nothing\b/i;
+export const denies = (s: string): boolean => SPONSOR_DENIAL.test(s) || PAY_DENIAL.test(s);
+export const NEGATED_SPONSOR = /\b(?:not|n't|never|no|nobody|no one|without)\s+(?:\w+\s+){0,3}?sponsor|\b(?:un|non)-?sponsored\b/i;
 // "supported by", "presented by" and "made possible by" are also ordinary speech (maintainer's screenshot, 2026-10-10: "ecosystem supported by physical discs and cartridges" was read as a sponsor called Physical, 90%).
 // On their own they count only when the line also frames an ad: "this video/episode/show", "sponsor", "ad".
 const WEAK_CUE = /\b(?:supported|presented|made possible) by\b/gi;
@@ -273,12 +312,14 @@ export function byTranscript(t: { state: 'ok'; lines: { t: number; text: string 
     const two = (k: number) => brandOf(lines[k].text) ?? spanned(k);
     const i = lines.findIndex((l, k) => {
       const win = lines.slice(k, k + 6).filter((x) => x.t - l.t <= 20);
-      if (!two(k) || !win.some((x) => SELL.test(x.text))) return false;
+      if (!two(k) || !win.some((x, n) => SELL.test(x.text) || SELL.test(x.text + ' ' + (win[n + 1]?.text ?? '')))) return false;
       const kind = classifyAd(win.map((x) => x.text).join(' '), two(k)).kind;
       return kind !== 'self' && kind !== 'affiliate';
     });
     if (i >= 0) {
       start = i; brand = two(i);
+      // An integrated read builds up to its selling line (Proton in Dylan Page's video, 2026-11-01: named from 18:21, "click the link" at 19:12): back to the first mention of the brand in the run, mentions at most 20 seconds apart.
+      for (let k = i - 1; k >= 0 && lines[start].t - lines[k].t <= 20 && lines[i].t - lines[k].t <= 120; k--) if (mentions(lines[k].text, brand!)) start = k;
       // A break cue a few seconds earlier ("let's take a quick break") is where the ad really starts.
       for (let k = i - 1; k >= 0 && k >= i - 3 && lines[i].t - lines[k].t <= 15; k--) if (classifyAd(lines[k].text).hits.some((h) => h.signal === 'transition' || h.signal === 'adMarker')) start = k;
     }
@@ -331,11 +372,16 @@ export function byTranscript(t: { state: 'ok'; lines: { t: number; text: string 
   // What the ad signals found that is NOT a sponsor, so the "i" says why (own course, affiliate links).
   const other = (['self', 'affiliate'] as const).map((k) => { const l = lines.find((x) => classifyAd(x.text).kind === k); return l ? (k === 'self' ? 'own promotion' : 'affiliate talk (not a sponsor)') + ' at ' + clock(l.t) : null; }).filter(Boolean);
   const otherNote = other.length ? ' · ' + other.join(', ') : '';
-  if (start < 0) return { method: 'transcript', said: 'no', score: 0.45, proof: 'No ad read in the transcript (' + lines.length + ' lines)' + saidNote + otherNote, mentions: said };
+  if (start < 0) {
+    // No ad read, and the creator says out loud that nobody paid: a stronger "no" than silence, and it outweighs the paid flag (see combine).
+    const di = lines.findIndex((l, i) => denies(l.text) || denies(l.text + ' ' + (lines[i + 1]?.text ?? '')));
+    if (di >= 0) return { method: 'transcript', said: 'no', score: 0.85, denied: true, proof: 'The creator says it is not paid, at ' + clock(lines[di].t) + ': “' + (lines[di].text.length > 90 ? lines[di].text.slice(0, 87) + '…' : lines[di].text) + '”. No ad read in the transcript (' + lines.length + ' lines)', mentions: said };
+    return { method: 'transcript', said: 'no', score: 0.45, proof: 'No ad read in the transcript (' + lines.length + ' lines)' + saidNote + otherNote, mentions: said };
+  }
   // Every ad burst, not just the first (maintainer, 2026-10-12, after comparing 100 finds with SponsorBlock: Zapier was caught at 0:17, a 3 second mention, and the real read at 7:07 was missed). A burst is a run of
   // lines that sell, name the brand or cue the ad, with gaps under 100 seconds. It counts when it holds a cue or a selling line (a brand named in passing does not make one); the longest is the main read.
   const cueAt = (i: number) => cue(lines[i].text) || (cue(around(i)) && !cue(around(i + 1)));
-  const isEv = (i: number) => SELL.test(lines[i].text) || cueAt(i) || !!(brand && (mentions(lines[i].text, brand) || (!mentions(lines[i + 1]?.text ?? '', brand) && mentions(lines[i].text + ' ' + (lines[i + 1]?.text ?? ''), brand)) || (heardAs !== null && misheard(lines[i].text, brand) !== null)));
+  const isEv = (i: number) => SELL.test(lines[i].text) || SELL.test(lines[i].text + ' ' + (lines[i + 1]?.text ?? '')) || cueAt(i) || !!(brand && (mentions(lines[i].text, brand) || (!mentions(lines[i + 1]?.text ?? '', brand) && mentions(lines[i].text + ' ' + (lines[i + 1]?.text ?? ''), brand)) || (heardAs !== null && misheard(lines[i].text, brand) !== null)));
   type Burst = { first: number; last: number; n: number; anchored: boolean };
   const bursts: Burst[] = [];
   for (let i = 0; i < lines.length; i++) {
@@ -454,12 +500,30 @@ export type Verdict = {
 };
 
 const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
-const same = (a: string, b: string) => { const x = norm(a), y = norm(b); return !!x && !!y && (x === y || (Math.min(x.length, y.length) >= 3 && (x.includes(y) || y.includes(x)))); };
+// The captions HEAR names (maintainer, 2026-10-24: the creator wrote Booking.com, the captions heard "Bookie.com", and the two were treated as rival brands, so the answer read "Checks disagree" at 51%).
+// Two spellings are one brand when they start the same way (5 letters, the web ending left off) and are at most 2 edits apart. Notion/Motion, Nord/Norton, Raycon/Raycast stay different brands.
+const stem = (x: string) => x.replace(/(com|net|org|io|co)$/, '');
+// How a name SOUNDS, roughly (recorded 2026-10-26, PewDiePie: the description says "Saily", the captions heard "Saylite"): y reads as i, ph as f, c and ck as k, z as s, doubled letters once. Two names are the same when one sounds like the other or like the start of it (5 letters at least).
+export const sounds = (x: string): string => stem(norm(x)).replace(/ph/g, 'f').replace(/ck/g, 'k').replace(/c/g, 'k').replace(/y/g, 'i').replace(/z/g, 's').replace(/(.)+/g, '$1');
+const soundsAlike = (a: string, b: string): boolean => { const x = sounds(a), y = sounds(b); return Math.min(x.length, y.length) >= 5 && (x === y || x.includes(y) || y.includes(x)); };
+export const heardAlike = (a: string, b: string): boolean => {
+  if (soundsAlike(a, b)) return true;
+  const x = stem(norm(a)), y = stem(norm(b));
+  if (x.length < 5 || y.length < 5) return false;
+  let p = 0; while (p < x.length && p < y.length && x[p] === y[p]) p++;
+  return p >= 5 && edits(x, y) <= 2;
+};
+const same = (a: string, b: string) => { const x = norm(a), y = norm(b); return !!x && !!y && (x === y || (Math.min(x.length, y.length) >= 3 && (x.includes(y) || y.includes(x))) || heardAlike(a, b)); };
 const clock = (s: number) => Math.floor(s / 60) + ':' + String(Math.round(s % 60)).padStart(2, '0');
 const orSum = (ps: number[]) => 1 - ps.reduce((acc, p) => acc * (1 - Math.max(0, Math.min(1, p))), 1);
 
 export function combine(votes: Vote[]): Verdict {
   const opinions = votes.filter((v) => v.said !== 'unknown');
+  // The creator says nobody paid and no check found an ad read: not sponsored, whatever the paid flag, a product link or a chapter title says (a product sent free is a gift, not a deal).
+  const denial = votes.find((v) => v.denied);
+  if (denial && !votes.some((v) => v.said === 'yes' && ['transcript', 'captions', 'listening', 'watch'].includes(v.method))) {
+    return { sponsored: false, brand: null, confidence: denial.score, agree: 1, ran: opinions.length, start: null, end: null, timeBy: null, needWatch: null, site: null, votes };
+  }
   // Brand candidates (each spelled as the most trusted method wrote it), supported by every method naming it.
   const cands: { brand: string; by: Vote[] }[] = [];
   // Only a "yes" starts a candidate; an unsure mention (an offer link without a label) can only back one.
@@ -489,12 +553,14 @@ export function combine(votes: Vote[]): Verdict {
   // "no" votes pull the confidence down; a rival brand does too.
   const rival = scored[1]?.p ?? 0;
   let confidence = top ? top.p : sponsored ? orSum(yesNoBrand.map((v) => v.score)) : noes.length ? orSum(noes.map((v) => v.score)) : 0;
-  if (sponsored) confidence *= 1 - 0.5 * orSum(noes.map((v) => v.score)) * (top ? 1 : 0.5);
-  if (top && rival) confidence *= 1 - rival / 2;
+  // "No ad read in the transcript" counts half against an answer the paid label already backs (recorded 2026-10-26, Mark McGee's PixelMob video: the whole video is the product, so no separate read is expected).
+  if (sponsored) confidence *= 1 - 0.5 * orSum(noes.map((v) => (v.method === 'transcript' && label ? v.score * 0.5 : v.score))) * (top ? 1 : 0.5);
+  // A WEAK rival does not cancel a strong answer (maintainer's screenshot, 2026-10-26, Creator Magic: the captions say "thank you to Fish Audio for supporting this build" at 90%, the paid label is on, and a 60% description link named "Mrc" cut the answer to 60%, under the marking line): the penalty grows with how close the rival is to the top.
+  if (top && rival) { const raw = (c: { by: Vote[] } | undefined) => (c ? orSum(c.by.map((v) => v.score)) : 0); const rr = raw(scored[1]), tr = raw(scored[0]); confidence *= 1 - (rr / 2) * Math.min(1, rr / Math.max(tr, 0.01)); } // (without the label's shared bonus, which both brands get)
   const backers = top ? top.by.length + (label ? 1 : 0) : sponsored ? yesNoBrand.length : noes.length;
   // The ad's time: transcript (exact lines) > Gemini > chapters > a viewer's hint, from a method that agrees.
   // No sponsor, no ad time (maintainer's screenshot, 2026-10-04: "No sponsor found" with "3:59 · Jump there" from a viewer).
-  const timedAll = !sponsored ? [] : ['transcript', 'captions', 'watch', 'sponsorblock', 'chapters', 'description', 'pinned', 'comments'].map((m) => votes.find((v) => v.method === m && v.start != null && (!top || !v.brand || same(v.brand, top.brand)))).filter((v): v is Vote => !!v);
+  const timedAll = !sponsored ? [] : ['transcript', 'captions', 'listening', 'watch', 'sponsorblock', 'chapters', 'description', 'pinned', 'comments'].map((m) => votes.find((v) => v.method === m && v.start != null && (!top || !v.brand || same(v.brand, top.brand)))).filter((v): v is Vote => !!v);
   const timed = timedAll.find((v) => !v.late) ?? timedAll[0] ?? null;
   const disagree = (!!top && rival > 0.4) || (sponsored && noes.some((v) => v.score >= 0.5));
   return {
@@ -514,7 +580,7 @@ export function combine(votes: Vote[]): Verdict {
 }
 
 /** The order the "All checks" list shows its rows in (maintainer, 2026-10-14): the label, the description, Clinch with Gemini, the transcript, Snap, the captions when there are some, chapters, the pinned comment, viewers, then SponsorBlock (bench build only). The AI read is gone (it no longer votes). Display only: the combined answer does not depend on it. */
-export const VOTE_ORDER: Method[] = ['label', 'description', 'watch', 'transcript', 'needle', 'captions', 'chapters', 'pinned', 'comments', 'sponsorblock', 'ai'];
+export const VOTE_ORDER: Method[] = ['label', 'description', 'watch', 'transcript', 'needle', 'captions', 'listening', 'chapters', 'pinned', 'comments', 'sponsorblock', 'ai'];
 export const inShowOrder = (votes: Vote[]): Vote[] => {
   const rank = (m: Method) => { const i = VOTE_ORDER.indexOf(m); return i < 0 ? VOTE_ORDER.length : i; };
   return votes.map((v, i) => ({ v, i })).sort((a, b) => rank(a.v.method) - rank(b.v.method) || a.i - b.i).map((x) => x.v);

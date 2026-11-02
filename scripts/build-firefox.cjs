@@ -13,7 +13,7 @@ m.permissions = (m.permissions || []).filter((p) => p !== 'alarms' && p !== 'off
 for (const p of ['ears.html', 'ort', 'needle']) fs.rmSync(path.join(out, p), { recursive: true, force: true });
 for (const f of fs.readdirSync(path.join(out, 'assets'))) if (/^(ears|listen\.worker|worker)-|\.wasm$/.test(f)) fs.rmSync(path.join(out, 'assets', f), { force: true });
 m.host_permissions = [...new Set([...(m.host_permissions || []), MOBILE])];
-m.content_scripts = (m.content_scripts || []).map((c) => ({ ...c, matches: [...new Set([...(c.matches || []), MOBILE])] }));
+m.content_scripts = (m.content_scripts || []).filter((c) => c.world !== 'MAIN').map((c) => ({ ...c, matches: [...new Set([...(c.matches || []), MOBILE])] }));
 m.browser_specific_settings = {
   gecko: { id: '{61f05bb4-e513-457c-adae-127be9d17631}', strict_min_version: '140.0', data_collection_permissions: { required: ['none'] } }, // 140 added the data-collection declaration Mozilla now asks for; page scripts in the page's own world need 128
   gecko_android: { strict_min_version: '142.0' },

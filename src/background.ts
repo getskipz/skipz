@@ -2,23 +2,25 @@
 // answers with a mark, and, after "I agree", sends what it found back to the Index. Nothing is ever sent for a video the person did not open.
 import { readYouTubeTab } from '@detector/lib/youtube/reader';
 import { readTranscript } from '@detector/lib/youtube/transcript';
-import { parseJson3 } from '@detector/lib/youtube/innertube';
+import { parseCaptionBody } from '@detector/lib/youtube/captions';
+import { recordFixture } from './fixture';
+import { keepMiss } from './misses';
 import type { ItTranscript } from '@detector/lib/youtube/innertube';
 import { loadSettings, saveSettings, bump, type Listen } from './settings';
 import { needleCandidates } from '@detector/lib/ai/needle';
 import type { NeedleRead } from '@detector/lib/ai/needle';
 import { effectiveMode } from './gate';
-import { burstsOf } from '@detector/lib/sponsor/check';
-import { verdictOf, markFrom, brandStretches, type Mark } from './verdict';
+
+import { verdictOf, decide, type Mark } from './verdict';
 import { askIndex, sendFinding, INDEX_URL } from './sharedList';
 import { isLocalCopy, readBuildId } from '@detector/lib/autoUpdate';
 
 // capText: the caption file the page script already fetched (at the very start of the page load, before YouTube's scripts get busy); capMs/capWhy: how that went
-export type Ask = { type: 'check'; videoId: string; url: string; capText?: string | null; capMs?: number; capWhy?: string };
+export type Ask = { type: 'check'; videoId: string; url: string; capText?: string | null; capMs?: number; capWhy?: string; capVia?: string; capText2?: string | null; force?: boolean }; // capText2: the player's other caption track (Capture); force: look again with it, ignoring the saved answer
 // found: a sponsor was found but not where it is (no times); retry: the reading was incomplete (captions refused or not ready yet), so the page asks again in a moment;
 // noCaptions: no caption could be read, so the page may LISTEN to the video instead (listen says whether the person agreed to that); known: the brands the page already names (the second ear spells them right)
 // debug: a short record of what the check did and how long each step took, shown on the page as the attribute data-skipz (and in "Copy info for support"), so a slow or empty check can be seen without guessing
-export type Debug = { via?: string; earlyMs?: number; earlyWhy?: string; calls?: string[]; pingMs?: number; pageMs?: number; captionsMs?: number; totalMs?: number; page?: string; captions?: string; why?: string; sponsored?: boolean; conf?: number; start?: number | null; end?: number | null; votes?: string[]; error?: string };
+export type Debug = { cached?: boolean; ver?: string; via?: string; earlyMs?: number; earlyWhy?: string; calls?: string[]; pingMs?: number; pageMs?: number; captionsMs?: number; totalMs?: number; page?: string; captions?: string; why?: string; sponsored?: boolean; conf?: number; start?: number | null; end?: number | null; votes?: string[]; error?: string; probable?: string };
 export type Answer = { debug?: Debug; mark: Mark | null; mode: 'off' | 'ask' | 'skip'; found?: string; retry?: boolean; noCaptions?: boolean; listen?: Listen; known?: string[] };
 
 // This session's answers, so a video is read once. An INCOMPLETE answer (no captions read, or a sponsor found without times) is kept only for RETRY_AFTER and tried again, up to TRIES times:
@@ -30,7 +32,7 @@ const RETRY_AFTER = 12000, TRIES = 4; // short: this runs on the video the perso
 const calls: string[] = [];
 const realExecute = chrome.scripting.executeScript.bind(chrome.scripting) as (i: unknown) => Promise<unknown>;
 (chrome.scripting as unknown as { executeScript: unknown }).executeScript = (i: { func?: { name?: string }; args?: unknown[] }) => { const t = Date.now(); const name = (i.func?.name || 'fn') + (typeof i.args?.[0] === 'string' ? ':' + String(i.args[0]).replace(/[?].*/, '').slice(-24) : ''); return realExecute(i).finally(() => { calls.push(name + ' ' + (Date.now() - t) + 'ms @' + new Date().toISOString().slice(17, 23)); if (calls.length > 40) calls.shift(); }); };
-const done = new Map<string, { mark: Answer['mark']; found?: string; retryAt: number | null; tries: number; noCaptions: boolean; known: string[] }>();
+const done = new Map<string, { mark: Answer['mark']; found?: string; retryAt: number | null; tries: number; noCaptions: boolean; known: string[]; debug?: Debug }>();
 
 // The page with no window that holds the listening models (ears.ts). Created the first time something needs it.
 let openingEars: Promise<void> | null = null;
@@ -38,7 +40,39 @@ const openEars = () => (openingEars ??= (async () => {
   if (!(await chrome.offscreen.hasDocument())) await chrome.offscreen.createDocument({ url: 'ears.html', reasons: [chrome.offscreen.Reason.WORKERS], justification: 'Runs the small listening models, which need web workers' });
 })().finally(() => { openingEars = null; }));
 async function needleRead(candidates: string[], paid: boolean, all: string): Promise<NeedleRead | null> {
-  try { await openEars(); return await Promise.race([chrome.runtime.sendMessage({ type: 'ears:needle', candidates, paid, all }), new Promise<null>((r) => setTimeout(() => r(null), 12000))]); } catch { return null; }
+  try { await openEars(); return await Promise.race([chrome.runtime.sendMessage({ type: 'ears:needle', candidates, paid, all }), new Promise<null>((r) => setTimeout(() => r(null), 45000))]); } catch { return null; }
+}
+// The listening models are fetched right after install (maintainer, 2026-10-24: "yes do this"), so nobody waits on the first video. Progress: the toolbar badge and a bar in the popup.
+// (The hidden page reports it as ears:progress; until 2026-10-24 that went nowhere, which is why the old notice sat at 1%.)
+let lastBadge = '';
+const badge = (pct: number | null) => { const t = pct === null || pct >= 100 ? '' : pct + '%'; if (t === lastBadge) return; lastBadge = t; void chrome.action.setBadgeText({ text: t }).catch(() => {}); if (t) void chrome.action.setBadgeBackgroundColor({ color: '#111' }).catch(() => {}); };
+const setListenStatus = (state: string, pct: number) => { badge(state === 'getting ready' ? pct : null); return chrome.storage.local.set({ listenStatus: { state, pct, at: Date.now() } }).catch(() => {}); };
+chrome.runtime.onMessage.addListener((m: { type?: string; pct?: number }) => {
+  if (m?.type === 'ears:progress') void setListenStatus((m.pct ?? 0) >= 100 ? 'ready' : 'getting ready', Math.max(1, Math.round(m.pct ?? 0)));
+  return false;
+});
+async function prefetchEars() {
+  if (!EARS) return;
+  const st = (await chrome.storage.local.get(['listenStatus', 'settings'])) as { listenStatus?: { state: string; at: number }; settings?: { listen?: string } };
+  if (st.settings?.listen === 'no' || (st.listenStatus?.state === 'ready' && Date.now() - st.listenStatus.at < 14 * 864e5)) return;
+  await setListenStatus('getting ready', 1);
+  try {
+    await openEars();
+    let r: { ok?: boolean } | undefined;
+    for (let i = 0; i < 8 && !r; i++) { r = await chrome.runtime.sendMessage({ type: 'ears:warm' }).catch(() => undefined); if (!r) await new Promise((res) => setTimeout(res, 500)); }
+    if (r?.ok) await setListenStatus('ready', 100); // (if the worker slept meanwhile, the final ears:progress above says it)
+  } catch { /* the page script tries again on the first video */ }
+}
+chrome.runtime.onInstalled.addListener(() => void prefetchEars());
+chrome.runtime.onStartup.addListener(() => void prefetchEars());
+async function keepCaptions(id: string, lines: { t: number; text: string }[]) {
+  try {
+    const recent: string[] = ((await chrome.storage.session.get('capRecent')).capRecent as string[] | undefined) ?? [];
+    const next = [id, ...recent.filter((x) => x !== id)];
+    const drop = next.slice(15).map((x) => 'cap:' + x);
+    await chrome.storage.session.set({ ['cap:' + id]: lines, capRecent: next.slice(0, 15) });
+    if (drop.length) await chrome.storage.session.remove(drop);
+  } catch { /* storage full or not available: just not kept */ }
 }
 const sentToday = new Set<string>();
 
@@ -47,7 +81,7 @@ async function check(tabId: number, ask: Ask): Promise<Answer> {
   const mode = effectiveMode(s.mode);
   if (mode === 'off' || (INDEX_URL && !s.agreed)) return { mark: null, mode }; // nothing to agree to until findings can be shared
   const prev = done.get(ask.videoId);
-  if (prev && (prev.retryAt === null || Date.now() < prev.retryAt)) return { mark: prev.mark, mode, found: prev.found, retry: prev.retryAt !== null, noCaptions: prev.noCaptions, listen: EARS ? s.listen : 'no', known: prev.known };
+  if (!ask.force && prev && (prev.retryAt === null || Date.now() < prev.retryAt)) return { mark: prev.mark, mode, found: prev.found, retry: prev.retryAt !== null, noCaptions: prev.noCaptions, listen: EARS && s.listen !== 'no' ? 'yes' : 'no', known: prev.known, debug: prev.debug && { ...prev.debug, cached: true } }; // a repeat answer still says how the first one was reached
   if (!prev) void bump('checked');
   const known = await askIndex(ask.videoId);
   if (known) { done.set(ask.videoId, { mark: known, retryAt: null, tries: 1, noCaptions: false, known: [] }); void bump('marked'); return { mark: known, mode }; }
@@ -59,26 +93,32 @@ async function check(tabId: number, ask: Ask): Promise<Answer> {
   // The captions: first the file the page script fetched at the start of the page load (not queued behind YouTube's own scripts); only if that has none, through the page, as before.
   // (Tried 2026-10-23: asking from the background is refused by YouTube with a 403, so that route is not used.)
   let via = 'page';
+  // The captions are kept for this browser session (the last 15 videos): opening a video again, or a retry, never asks YouTube twice, so there is less to be refused.
   const getCaptions = async () => {
-    if (ask.capText) { const lines = parseJson3(ask.capText); if (lines.length) { via = 'early'; return { state: 'ok' as const, lines }; } }
-    return readTranscript(tabId, ask.videoId);
+    const key = 'cap:' + ask.videoId;
+    const kept = (await chrome.storage.session.get(key).catch(() => ({})) as Record<string, { t: number; text: string }[] | undefined>)[key];
+    if (kept?.length) { via = 'kept'; return { state: 'ok' as const, lines: kept }; }
+    let got: Awaited<ReturnType<typeof readTranscript>> | null = null;
+    if (ask.capText) { const lines = parseCaptionBody(ask.capText); if (lines.length) { via = ask.capVia ?? 'early'; got = { state: 'ok' as const, lines }; } }
+    got ??= await readTranscript(tabId, ask.videoId, { panel: false }); // never YouTube's transcript panel (maintainer, 2026-10-24: it ruins the page); no captions then means the listening does the work
+    if (got.state === 'ok') void keepCaptions(ask.videoId, got.lines);
+    return got;
   };
   const [, page, tr] = await Promise.all([ping, readYouTubeTab(tabId, ask.url).finally(() => { tPage = Date.now() - t0; }), getCaptions().finally(() => { tCaps = Date.now() - t0; })]);
   if (page.kind !== 'video' || page.video.videoId !== ask.videoId) return { mark: null, mode, retry: true, debug: { pageMs: tPage, captionsMs: tCaps, page: page.kind === 'video' ? 'other video ' + page.video.videoId : page.kind } }; // the page was not ready or the person moved on: not remembered, asked again soon
-  // YouTube's own captions: first the quiet route (the page's own interface, nothing shown); if YouTube refuses that, the Transcript panel is opened out of sight, read and closed again (the same two steps Skipz takes).
-  // Until 2026-10-22 only the quiet route was tried, so a refused video got no times and so no mark.
+  // YouTube's own captions: first the quiet route (the page's own interface, nothing shown); if YouTube refuses that there are no captions, and the listening hears the video instead.
+  // (2026-10-22 added the panel as a fallback; 2026-10-24 removed it again on the maintainer's word: it must never show. The listening covers a video the quiet route cannot read.)
+  if (tr.state !== 'ok' && /refus|paused/i.test(String((tr as { why?: string }).why ?? ''))) void chrome.storage.local.set({ skipzYtPausedUntil: Date.now() + 600000 }).catch(() => {}); // the page script and the switch read the same pause
   const captions: ItTranscript = tr.state === 'ok' ? tr : tr.state === 'none' ? { state: 'none' } : { state: 'trouble', why: tr.why ?? 'The transcript did not open in time.' };
-  const v = verdictOf(page, captions);
-  const needleWanted = v.sponsored && !v.brand; // a sponsor is certain but nobody named it: the naming model is asked AFTER the answer goes out (nothing on screen shows a name, so it must not make anyone wait); it only feeds the listening's brand list
+  const second = ask.capText2 ? parseCaptionBody(ask.capText2) : null;
+  const v = verdictOf(page, captions, null, second);
+  void recordFixture(ask.videoId, { source: 'skipz', title: page.video.title ?? null, channel: page.channel?.name ?? null, lengthSeconds: page.video.lengthSeconds ?? null, paid: !!page.video.paidPromotion, description: page.video.description ?? null, chapters: page.video.chapters ?? [], captionLines: captions.state === 'ok' ? captions.lines : null, captionsVia: via, secondTrackLines: second, answer: { sponsored: v.sponsored, brand: v.brand, confidence: v.confidence, start: v.start, end: v.end, votes: v.votes.map((x) => ({ method: x.method, said: x.said, brand: x.brand ?? null, score: x.score, start: x.start ?? null, end: x.end ?? null, proof: x.proof })) } });
+  const needleWanted = true; // the naming model runs on EVERY video (maintainer's rule, 2026-10-24: every detector, every time), AFTER the answer goes out so nobody waits; it feeds the listening's brand list
   const named = [...new Set(v.votes.map((x) => x.brand).filter((x): x is string => !!x))];
   const noCaptions = captions.state !== 'ok';
-  const more = burstsOf(v).filter((b) => !b.main && b.end !== null).map((b) => ({ start: b.start, end: b.end! })); // every other burst the reading found
-  let found = { ...v, more } as typeof v & { more: { start: number; end: number }[] };
-  if (v.sponsored && (v.start === null || v.end === null) && v.brand && captions.state === 'ok') { // sure there is a sponsor, but no spoken read found: an integrated sponsor, marked where the creator talks about the brand
-    const s = brandStretches(captions.lines, v.brand).sort((a, b) => (b.end - b.start) - (a.end - a.start));
-    if (s.length) found = { ...v, start: s[0].start, end: s[0].end, more: s.slice(1).sort((a, b) => a.start - b.start) };
-  }
-  const mark = v.sponsored ? markFrom(ask.videoId, found, 'page') : null;
+  const { mark, probable } = decide(ask.videoId, v, captions.state === 'ok' ? captions.lines : null, page.video.description); // the same function the replay tests run (src/replay.test.ts)
+  // Only the misses are kept (maintainer, 2026-11-01): sure there is a sponsor, but not placed, or placed only by a best guess. Kept on this computer; the popup can save them to a file.
+  if (v.sponsored && !mark) void keepMiss({ videoId: ask.videoId, title: page.video.title ?? null, channel: page.channel?.name ?? null, lengthSeconds: page.video.lengthSeconds ?? null, paid: !!page.video.paidPromotion, description: (page.video.description ?? '').slice(0, 3000), chapters: page.video.chapters ?? [], captionLines: captions.state === 'ok' ? captions.lines : null, brand: v.brand, confidence: v.confidence, why: !mark ? 'found, not placed' : 'placed by the words of the description (' + probable + ')', at: new Date().toISOString(), version: chrome.runtime.getManifest().version });
   const tries = (prev?.tries ?? 0) + 1;
   const incomplete = captions.state !== 'ok' || (v.sponsored && !mark);
   const retryAt = incomplete && !mark && tries < TRIES ? Date.now() + RETRY_AFTER : null;
@@ -87,22 +127,27 @@ async function check(tabId: number, ask: Ask): Promise<Answer> {
   if (mark && !prev?.mark) void bump('marked');
   void chrome.storage.local.set({ lastCheck: { videoId: ask.videoId, pageMs: tPage, captionsMs: tCaps, totalMs: Date.now() - t0, captions: captions.state, sponsored: v.sponsored, marked: !!mark, at: new Date().toISOString() } }).catch(() => {}); // for "Copy info for support": where the time went
   if (needleWanted) void (async () => {
+    const needleT0 = Date.now();
     const nr = await needleRead(needleCandidates(page.video.description, captions.state === 'ok' ? captions.lines : null, v.start, !!page.video.paidPromotion), !!page.video.paidPromotion, page.video.description ?? '');
     const e = done.get(ask.videoId);
     if (nr && 'brand' in nr && nr.brand && e) e.known = [...new Set([...e.known, nr.brand])];
+    void recordFixture(ask.videoId, { needle: nr ?? null, needleWaitedMs: Date.now() - needleT0 }); // fixture recorder: what the naming model returned, and how long it took
   })();
   if (INDEX_URL && !sentToday.has(ask.videoId)) {
     sentToday.add(ask.videoId);
     const r = await sendFinding(ask.videoId, page.video.channelId, { ...v, methods: v.votes }, true);
     if (r === 'sent') void bump('shared'); else if (r === 'later') sentToday.delete(ask.videoId);
   }
-  const debug: Debug = { via, earlyMs: ask.capMs, earlyWhy: ask.capWhy, calls: calls.slice(), pingMs: pinged, pageMs: tPage, captionsMs: tCaps, totalMs: Date.now() - t0, page: 'video', captions: captions.state === 'ok' ? 'ok ' + captions.lines.length + ' lines' : captions.state + (captions.state === 'trouble' ? ': ' + captions.why : ''), sponsored: v.sponsored, conf: Math.round(v.confidence * 100), start: v.start, end: v.end, votes: v.votes.map((x) => x.method + ':' + x.said + ':' + Math.round(x.score * 100)) };
-  return { mark, mode, found: note, retry: retryAt !== null, noCaptions, listen: EARS ? s.listen : 'no', known: named, debug };
+  const debug: Debug = { ver: chrome.runtime.getManifest().version, via, earlyMs: ask.capMs, earlyWhy: ask.capWhy, calls: calls.slice(), pingMs: pinged, pageMs: tPage, captionsMs: tCaps, totalMs: Date.now() - t0, page: 'video', captions: captions.state === 'ok' ? 'ok ' + captions.lines.length + ' lines' : captions.state + (captions.state === 'trouble' ? ': ' + captions.why : ''), sponsored: v.sponsored, conf: Math.round(v.confidence * 100), start: v.start, end: v.end, ...(probable ? { probable } : {}), votes: v.votes.map((x) => x.method + ':' + x.said + ':' + Math.round(x.score * 100) + (x.brand ? ':' + x.brand : '') + (x.start != null ? '@' + Math.round(x.start) + '-' + Math.round(x.end ?? 0) : '')) };
+  { const e = done.get(ask.videoId); if (e) e.debug = debug; }
+  return { mark, mode, found: note, retry: retryAt !== null, noCaptions, listen: EARS && s.listen !== 'no' ? 'yes' : 'no', known: named, debug };
 }
 
-chrome.runtime.onMessage.addListener((msg: Ask | { type: 'stat'; key: 'asked' | 'skipped' | 'kept' } | { type: 'listen-open' } | { type: 'listen-choice'; yes: boolean }, sender, reply) => {
+chrome.runtime.onMessage.addListener((msg: Ask | { type: 'stat'; key: 'asked' | 'skipped' | 'kept' | 'late' } | { type: 'listen-open' } | { type: 'listen-allowed' } | { type: 'listen-choice'; yes: boolean } | { type: 'rec-heard'; videoId: string; at: number; secs: number; text: string }, sender, reply) => {
+  if (msg.type === 'rec-heard') { void recordFixture(msg.videoId, { heardAppend: [{ t: Math.round(msg.at), secs: Math.round(msg.secs), text: msg.text }] }); return false; }
   if (msg.type === 'stat') { void bump(msg.key); return false; }
   if (msg.type === 'listen-open') { openEars().then(() => reply({ ok: true }), () => reply({ ok: false })); return true; }
+  if (msg.type === 'listen-allowed') { loadSettings().then((s) => reply({ ok: EARS && s.listen !== 'no' && s.mode !== 'off' }), () => reply({ ok: false })); return true; }
   if (msg.type === 'listen-choice') { saveSettings({ listen: msg.yes ? 'yes' : 'no' }).then(() => reply({ ok: true })); return true; }
   const tabId = sender.tab?.id;
   if (msg.type !== 'check' || tabId === undefined) return false;

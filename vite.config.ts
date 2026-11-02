@@ -21,8 +21,8 @@ export default defineConfig({
   build: {
     outDir: 'dist', emptyOutDir: true, target: 'chrome120', modulePreload: { polyfill: false },
     rollupOptions: {
-      input: { popup: resolve(import.meta.dirname, 'popup.html'), ears: resolve(import.meta.dirname, 'ears.html'), content: resolve(import.meta.dirname, 'src/content.ts'), background: resolve(import.meta.dirname, 'src/background.ts') },
-      output: { entryFileNames: (c) => (c.name === 'background' ? 'background.js' : c.name === 'content' ? 'content.js' : 'assets/[name]-[hash].js') },
+      input: { popup: resolve(import.meta.dirname, 'popup.html'), ears: resolve(import.meta.dirname, 'ears.html'), content: resolve(import.meta.dirname, 'src/content.ts'), capture: resolve(import.meta.dirname, 'src/capture.ts'), background: resolve(import.meta.dirname, 'src/background.ts') },
+      output: { entryFileNames: (c) => (c.name === 'background' ? 'background.js' : c.name === 'content' ? 'content.js' : c.name === 'capture' ? 'capture.js' : 'assets/[name]-[hash].js') },
     },
   },
   test: { include: ['src/**/*.test.ts'], testTimeout: 30000 },

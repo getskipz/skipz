@@ -7,20 +7,15 @@
 export type Signal = 'sponsor' | 'partnership' | 'adMarker' | 'transition' | 'promo' | 'code' | 'cta' | 'affiliate' | 'self';
 export type SignalHit = { signal: Signal; phrase: string };
 
-export const SIGNAL_NAME: Record<Signal, string> = {
-  sponsor: 'Sponsorship phrase', partnership: 'Paid partnership', adMarker: 'Ad marker', transition: 'Ad transition',
-  promo: 'Product promotion', code: 'Discount or promo code', cta: 'Call to action', affiliate: 'Affiliate signal', self: "Creator's own promotion",
-};
-
 // Captions drop apostrophes ("ive been using", "lets take a quick break"), so they are optional everywhere.
 const RULES: Record<Signal, RegExp> = {
-  sponsor: /\b(?:(?:this (?:video|episode|show|podcast|one) )?(?:is|was) (?:sponsored|brought to you) by|(?:sponsored|brought to you) by(?! (?:the|a|an|some|other|another) (?:company|companies|brands?|people|person|folks|guys)\b)|thanks? (?:you )?to [\w .&'-]{2,40}? for (?:sponsoring|supporting)|(?:today|this (?:week|episode|video))'?s sponsor|(?:our|the) sponsors?\b)/i,
-  partnership: /\b(?:paid (?:partnership|promotion|collab(?:oration)?)|(?:in )?partnership with|partnered with|includes paid promotion|collab with|(?:made|created|produced|done|filmed) in collab(?:oration)? with)\b/i,
+  sponsor: /\b(?:(?:this (?:video|episode|show|podcast|one) )?(?:is|was) (?:sponsored|brought to you) by|(?:sponsored|brought to you) by(?! (?:the|a|an|some|other|another) (?:company|companies|brands?|people|person|folks|guys)\b)|thanks? (?:you )?to [\w .&'-]{2,40}? for (?:sponsoring|supporting)|(?:today|this (?:week|episode|video))'?s (?:(?:video|episode|show|podcast) )?sponsor|(?:our|the) sponsors?\b)/i,
+  partnership: /\b(?:paid (?:partnership|promotion|collab(?:oration)?)|(?:(?<=^\s*)|(?<=\b(?:i|we|i'?ve|we'?ve|i'?m|we'?re|i am|we are)\s(?:(?:also|proudly|officially|recently|just|now|been|have|has)\s)*)|(?<=\b(?:video|episode|show|podcast|one) (?:is|was) (?:(?:also|proudly|officially) )*))(?:in )?(?:partnership with|partnered with)|includes paid promotion|collab with|(?:made|created|produced|done|filmed) in collab(?:oration)? with)\b/i,
   adMarker: /\b(?:this is (?:an? )?(?:ad|advert|advertisement|sponsored (?:segment|post|content))|(?:promotional|sponsored|paid) content|advertisement)\b|(?:^|\s)#(?:ad|sponsored|paidpartnership)\b/i,
   transition: /\b(?:before we (?:continue|go on|get back)|let'?s take a (?:quick |short |brief )?break|(?:a |the )?quick (?:break|word from)|but first,? a (?:quick )?word|short break)\b/i,
   promo: /\b(?:i'?ve|i have|we'?ve|we have) (?:been )?(?:using|loving)\b|\b(?:i )?(?:wanted|want) to (?:tell|share|show) you about\b|\blet me tell you about\b|\byou (?:need|should|have|must|gotta|ought) to (?:get|try|grab|download|check out|sign up for) (?!(?:a|an|the|some|your|my|more|enough|to|it|this|that|them|these|those|one|out|rid|back|up|ready|used)\b)\w/i,
   code: /\b(?:use|with|enter|apply) (?:my |the |our )?(?:promo |discount |coupon )?code\b|\b(?:promo|discount|coupon) code\b|\b\d{1,3} ?(?:%|percent) off\b|\bsave \d{1,3} ?(?:%|percent)(?![a-z])|\bget \$\d+\b|\btry (?:it |them )?(?:for )?free\b|\bfree trial\b|\b(?:in|of) (?:free )?credits\b|\bcoupon\b/i,
-  cta: /\b(?:click (?:the |on the )?link|link (?:is )?(?:down )?(?:below|in (?:the )?(?:description|bio))|(?:sign up|signup|sign-up) (?:using|with|at|today|through)|use my link|(?:head|go) (?:over )?to [\w.]+ ?(?:dot )?(?:com|ai|io|co|app)|head over to)\b/i,
+  cta: /\b(?:click (?:the |on the )?link|links? (?:(?:is|are) )?(?:down )?(?:below|in (?:the |my )?(?:pinned comment|video description|description|bio))|(?:sign up|signup|sign-up) (?:using|with|at|today|through)|(?:use|using) my links?|(?:head|go) (?:over )?to [\w.]+ ?(?:dot )?(?:com|ai|io|co|app)|head over to)\b/i,
   affiliate: /\baffiliate\b|\bamazon associates?\b|\bqualifying purchases\b|\b(?:i|we) (?:may |will |might )?(?:earn|get|receive|make) (?:a |an )?(?:small )?(?:affiliate )?commission\b|\bcommission (?:from|if)\b/i,
   self: /\b(?:my|our) (?:own )?(?:course|courses|product|products|book|ebook|newsletter|merch|membership|community|app|template|templates|program|coaching|masterclass|workshop|cohort|shop|store)\b|\bjoin my\b/i,
 };

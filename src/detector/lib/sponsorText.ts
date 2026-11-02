@@ -20,6 +20,7 @@ export type TextSponsor = { brand: string; line: string; how: 'said' | 'code' | 
 // The words may start a sentence ("Sponsored by Wispr Flow!", HowToMen, maintainer 2026-10-01: missed because only a
 // lowercase "sponsored by" matched) or be in capitals; the brand itself must still start with a capital.
 const SAID = [
+  /\b([A-Z][\w&'-]*(?:\s+[A-Z][\w&'-]*){0,2})\s+(?:[Ii]s|[Aa]re|IS|ARE)\s+(?:[Aa]lso\s+|[Pp]roudly\s+|[Kk]indly\s+)?(?:[Ss]ponsoring|SPONSORING)\b/,
   /\b(?:[Ss]ponsored|SPONSORED)\s+(?:[Bb][Yy])\s+([A-Z][\w&'-]*(?:\s+[A-Z][\w&'-]*){0,2})/,
   /\bthanks? (?:you )?to\s+([A-Z][\w&'-]*(?:\s+[A-Z][\w&'-]*){0,2})\s+for\s+(?:sponsoring|supporting|partnering)/i,
   /\b(?:[Ii]n )?(?:[Pp]artnership|PARTNERSHIP)\s+(?:with|WITH)\s+([A-Z][\w&'-]*(?:\s+[A-Z][\w&'-]*){0,2})/,
@@ -32,12 +33,18 @@ const SAID = [
 // Words that make a line with a link look like an ad read (not just "my Instagram").
 // ("Get $20 in credits": Fireship's real Exa line, 2026-09-29.)
 // A personal code at a brand's checkout is a deal, even without YouTube's label (CODE and OWN_HOSTS now live in door.ts, which reads the same lines).
-const ADS = /\b(sponsor|try (?:it )?(?:for )?free|free trial|use (?:my )?code|with (?:the |my )?code|promo code|coupon|discount|% off|get \d+%|save \d+ ?%|sign up|download .* free|check out|credits?|(?:free |book a |request a |get (?:your|a) )?demo|start (?:your |a )?free)\b|get \$\d+|save \d+ ?%|get your [\w ]{0,30}\btoday\b|\bdownload (?:the |our |my )?(?:[A-Z][\w&'-]*\s+){1,3}app\b/i;
+const ADS = /\b(sponsor|try (?:it )?(?:for )?free|free trial|use (?:my )?code|with (?:the |my )?code|promo code|coupon|discount|% off|get \d+%|save \d+ ?%|sign up|download .* free|check out|credits?|(?:free |book a |request a |get (?:your|a) )?demo|start (?:your |a )?free|(?:with|using|through|via) (?:our|my) link|(?:black friday|cyber monday|holiday|summer|winter|spring) (?:sale|deal)|exclusive (?:deal|offer))\b|get \$\d+|save \d+ ?%|get your [\w ]{0,30}\btoday\b|\bdownload (?:the |our |my )?(?:[A-Z][\w&'-]*\s+){1,3}app\b/i;
 // Links that are never a paying brand: the creator's own channels, fan support, link pages.
 // Whole addresses only: "mux.com" must not match "x.com" (bug found 2026-09-29).
 // Click-counting middlemen (affiliate networks, link shorteners): the address names the middleman, not the brand
 // (maintainer, 2026-10-01: "I384100 · imp.i384100.net" listed as a sponsor). Skipz doesn't guess the brand behind them.
-const REDIRECTS = ['sjv.io', 'pxf.io', 'ojrq.net', '7eer.net', 'shareasale.com', 'awin1.com', 'rebrand.ly', 'dub.sh', 'short.io', 'go2cloud.org', 'partnerstack.com'];
+const REDIRECTS = ['sjv.io', 'pxf.io', 'ojrq.net', '7eer.net', 'shareasale.com', 'awin1.com', 'rebrand.ly', 'dub.sh', 'short.io', 'go2cloud.org', 'partnerstack.com', 'dada.link', 'smarturl.it', 'ow.ly', 'buff.ly', 'is.gd', 'cutt.ly', 't.ly', 'tiny.cc', 'rb.gy', 'shorturl.at', 'bl.ink', 'lnk.to', 'snip.ly'];
+// The name the creator WROTE just before such a link ("🎥Pixelmob Pro (Join kickstarter to save 31% Off retail!) ➡ https://dada.link/x"): the address names the middleman, the words before it name the product.
+const writtenBefore = (line: string): string | null => line.replace(/^[^\p{L}\p{N}]+/u, '').match(/^([A-Z][\w&'-]*(?:\s+[A-Z][\w&'-]*){0,2})\s*(?:[(:–—\-➡→>]|https?:)/u)?.[1] ?? null;
+// "Play War Thunder now with my links": the product is what follows the verb (Salem Techsperts, 2026-11-01: it had been read as "Play", the start of the address playwt.link).
+const IMPERATIVE = /^(?:Play|Get|Try|Download|Use|Check out|Watch|Join|Visit|Grab|Start|Claim|Install|Support|Shop|Save|Sign up for)\s+((?:[A-Z][\w&'-]*)(?:\s+[A-Z][\w&'-]*){0,2})/;
+const afterVerb = (line: string): string | null => line.replace(/^[^\p{L}\p{N}]+/u, '').match(IMPERATIVE)?.[1] ?? null;
+const VERB_WORD = /^(?:play|get|try|download|use|check|watch|join|visit|grab|start|claim|install|support|shop|save|sign)$/i;
 const isRedirect = (h: string) => REDIRECTS.some((d) => h === d || h.endsWith('.' + d)) || /(^|\.)i\d{4,}\.net$/.test(h);
 const isOwn = (host: string) => { const h = host.toLowerCase(); return OWN_HOSTS.some((d) => h === d || h.endsWith('.' + d)) || /(^|\.)amazon\./.test(h) || isRedirect(h); };
 
@@ -60,7 +67,14 @@ export function sponsorFromText(description: string | null | undefined): TextSpo
     // A link typed without "https://" (justprayapp.co/orthodox) counts too, on this line or the next.
     const BARE = /(?:^|\s)((?:[a-z0-9-]+\.)+(?:com|co|io|ai|app|net|org|me|ly|tv|so|xyz|gg|link|shop|store|dev|us|uk))(?:\/\S*)?(?=\s|$)/i;
     const next = lines[li + 1] ?? '';
-    const url = line.match(/https?:\/\/([^\s/?#]+)[^\s]*/i) ?? next.match(/^https?:\/\/([^\s/?#]+)[^\s]*/i) ?? line.match(BARE) ?? next.match(BARE);
+    const url = line.match(/https?:\/\/([^\s/?#]+)[^\s]*/i) ?? next.match(/^(?:[\w ]{1,12}:\s*)?https?:\/\/([^\s/?#]+)[^\s]*/i) ?? line.match(BARE) ?? next.match(BARE);
+    if (url && isRedirect(url[1].toLowerCase())) { // a middleman's address: the product's name is the words the creator wrote before it, if there are any
+      // else the product the whole description keeps naming ("PixelMob is live on Kickstarter! ... Link: https://dada.link/x": the first word, said at least twice, is the product; recorded 2026-10-26 from Mark McGee's PixelMob video)
+      const lead = line.replace(/^[^\p{L}\p{N}]+/u, '').match(/^([A-Z][\w&'-]{2,})/u)?.[1] ?? null;
+      const imp = afterVerb(line);
+      const w = imp ?? writtenBefore(line) ?? (lead && (description.toLowerCase().split(lead.toLowerCase()).length - 1) >= 2 ? lead : null);
+      if (w && w.length >= 4) return { brand: w, line: clip(line), how: CODE.test(line) ? 'code' : 'link', site: url[1].toLowerCase(), door: doorWord(doorOfLine(line)) };
+    }
     if (!url || isOwn(url[1])) continue;
     // The main part of the address: dashboard.exa.ai -> exa, coderabbit.link -> coderabbit, shop.brand.co.uk -> brand.
     const parts = url[1].toLowerCase().split('.').filter(Boolean);
@@ -71,8 +85,9 @@ export function sponsorFromText(description: string | null | undefined): TextSpo
     // "Download the Just Pray App: <link>": the name is the words before "app", when they are what the address says (justprayapp.co).
     const appName = (line.match(/\bdownload (?:the |our |my )?((?:[A-Z][\w&'-]*\s+){1,3})app\b/i)?.[1] ?? '').trim();
     const appOk = appName && appName.toLowerCase().replace(/[^a-z0-9]/g, '') && name.startsWith(appName.toLowerCase().replace(/[^a-z0-9]/g, '')) ? appName : null;
-    const written = appOk ?? line.split(/[^\w&'-]+/).find((w) => { const k = w.toLowerCase().replace(/[^a-z0-9]/g, ''); return /[A-Z]/.test(w) && (k === name || (k.length >= 4 && name.startsWith(k) && name.length - k.length <= 12)); }); // "Keeper" for keepersecurity.com
-    const shown = written && /[A-Z]/.test(written) ? written : name.charAt(0).toUpperCase() + name.slice(1);
+    const written = appOk ?? line.split(/[^\w&'-]+/).map((w) => w.replace(/['\u2019]s$/i, '')).find((w) => { const k = w.toLowerCase().replace(/[^a-z0-9]/g, ''); return /[A-Z]/.test(w) && (k === name || (k.length >= 4 && name.startsWith(k) && name.length - k.length <= 12)); }); // "Keeper" for keepersecurity.com
+    const writtenWord = written && VERB_WORD.test(written) ? (afterVerb(line) ?? written) : written;
+    const shown = writtenWord && /[A-Z]/.test(writtenWord) ? writtenWord : name.charAt(0).toUpperCase() + name.slice(1);
     const brand = !/[a-z]/.test(shown) && shown.length > 4 ? shown.toLowerCase().replace(/\b[a-z]/g, (c) => c.toUpperCase()) : shown; // "JUST PRAY" -> "Just Pray"
     return { brand, line: clip(line), how: CODE.test(line) ? 'code' : 'link', site: url[1].toLowerCase().replace(/^www\./, ''), door: doorWord(doorOfLine(line)) };
   }
@@ -103,7 +118,8 @@ export function brandLink(description: string | null | undefined, own: (string |
       const words = line.split(/[^\w&'-]+/);
       const written = words.find((w) => /[A-Z]/.test(w) && w.toLowerCase().replace(/[^a-z0-9]/g, '') === main) ??
         words.find((w) => /^[A-Z]/.test(w) && w.length >= 4 && main.startsWith(w.toLowerCase().replace(/[^a-z0-9]/g, '')));
-      return { brand: written && /[A-Z]/.test(written) ? written : main.charAt(0).toUpperCase() + main.slice(1), line: clip(line), how: 'link', site: host, door: doorWord(doorOfLine(line)) };
+      const named = written && VERB_WORD.test(written) ? (afterVerb(line) ?? written) : written; // "Play War Thunder now with my links": War Thunder, not Play
+      return { brand: named && /[A-Z]/.test(named) ? named : main.charAt(0).toUpperCase() + main.slice(1), line: clip(line), how: 'link', site: host, door: doorWord(doorOfLine(line)) };
     }
   }
   return null;

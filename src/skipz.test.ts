@@ -23,10 +23,16 @@ describe('the skip lock', () => {
 describe('marks', () => {
   const good = { brand: 'Surfshark', start: 120, end: 190, confidence: 0.9 };
   it('marks a sure, timed sponsor', () => expect(markFrom('abcdefghijk', good, 'page')?.brand).toBe('Surfshark'));
-  it('keeps the other bursts, dropping silly ones', () => {
-    const m = markFrom('abcdefghijk', { ...good, more: [{ start: 71, end: 74 }, { start: 5, end: 5 }, { start: 10, end: 2000 }] }, 'page')!;
-    expect(m.more).toEqual([{ start: 69, end: 77 }]);
-    expect(burstsOfMark(m)).toEqual([{ start: 118, end: 193 }, { start: 69, end: 77 }]);
+  // Only the LONG segments are marked (maintainer, 2026-11-01: "we have 2 markers but the longer one is the real sponsored segment ... stick to the long marked segments"): a few seconds of plug beside the real read is not marked.
+  it('keeps the other LONG bursts, and drops short plugs and silly ones', () => {
+    const m = markFrom('abcdefghijk', { ...good, more: [{ start: 71, end: 74 }, { start: 5, end: 5 }, { start: 10, end: 2000 }, { start: 300, end: 345 }] }, 'page')!;
+    expect(m.more).toEqual([{ start: 298, end: 348 }]);
+    expect(burstsOfMark(m)).toEqual([{ start: 118, end: 193 }, { start: 298, end: 348 }]);
+  });
+  it('marks one segment when the other burst is only a short plug (Grok Bot: the read 0:18 to 0:53 and a 12 second plug at 8:57)', () => {
+    const m = markFrom('abcdefghijk', { brand: 'Grok Bot', start: 18, end: 53, confidence: 0.98, more: [{ start: 537, end: 549 }] }, 'page')!;
+    expect(m.more).toBeUndefined();
+    expect(burstsOfMark(m)).toEqual([{ start: 16, end: 56 }]);
   });
   it('starts the mark 2 seconds early and ends it 3 seconds late when it read the page, but leaves an Index mark as it is', () => {
     expect(markFrom('a', good, 'page')).toMatchObject({ start: 118, end: 193 });
@@ -86,5 +92,53 @@ describe('an integrated sponsor (YCImaging, "Sponsored By SmallRig", 2026-10-22)
   it('does not mark a brand named once in passing', () => {
     expect(brandStretches([{ t: 10, text: 'I like Acme a lot' }, { t: 400, text: 'and that is all' }], 'Acme')).toEqual([]);
     expect(brandStretches(lines, 'Hi')).toEqual([]); // a very short name is never searched for
+  });
+});
+
+describe('two sponsors in one video (PewDiePie, 2026-10-24)', () => {
+  const page = {
+    kind: 'video' as const, channel: { channelId: 'UCaaaaaaaaaaaaaaaaaaaaaa', name: 'Some Channel', source: 'page' as const },
+    video: { source: 'page' as const, videoId: 'abcdefghijk', channelId: 'UCaaaaaaaaaaaaaaaaaaaaaa', paidPromotion: true, lengthSeconds: 700, chapters: [],
+      description: 'The biggest protection in the game! Go to https://nordvpn.com/pewdiepie and get an exclusive NordVPN deal + 4 extra months.\n\nGet an exclusive 15% discount on Saily data plans! Use code pewdiepie at checkout. Download Saily app or go to https://saily.com/pewdiepie' },
+  };
+  const lines = [
+    { t: 40, text: 'so before we start' }, { t: 61, text: 'this video is sponsored by NordVPN' }, { t: 66, text: 'NordVPN protects you online with one tap' }, { t: 74, text: 'go to nordvpn.com slash pewdiepie for the deal' }, { t: 90, text: 'link in the description' }, { t: 170, text: 'anyway back to the video' },
+    { t: 580, text: 'and now something else' }, { t: 587, text: 'this part is also brought to you by Saily' }, { t: 592, text: 'Saily is an eSIM app for travel data' }, { t: 600, text: 'use code pewdiepie at saily dot com' }, { t: 640, text: 'okay on with it' },
+  ];
+  it('marks the main read and keeps the second sponsor as another burst, not a rival that cancels the mark', () => {
+    const v = verdictOf(page as never, { state: 'ok', lines });
+    expect(v.sponsored).toBe(true);
+    expect(v.confidence).toBeGreaterThanOrEqual(0.7);
+    expect(v.extra.some((b) => b.start >= 580 && b.start <= 600)).toBe(true);
+  });
+});
+
+describe('overlapping bursts are drawn as one', () => {
+  it('a plug up front that lies inside the main read joins it; a far one stays apart', () => {
+    const m = { videoId: 'a', brand: 'X', start: 59, end: 172, confidence: 0.9, from: 'page' as const, more: [{ start: 36, end: 172 }, { start: 585, end: 710 }] };
+    expect(burstsOfMark(m)).toEqual([{ start: 36, end: 172 }, { start: 585, end: 710 }]);
+  });
+});
+
+describe("Capture: the player's other caption track (2026-10-26)", () => {
+  const page = {
+    kind: 'video' as const, channel: { channelId: 'UCaaaaaaaaaaaaaaaaaaaaaa', name: 'Some Channel', source: 'page' as const },
+    video: { source: 'page' as const, videoId: 'abcdefghijk', channelId: 'UCaaaaaaaaaaaaaaaaaaaaaa', description: 'A video about plants.', lengthSeconds: 600, chapters: [] },
+  };
+  const plain = [{ t: 100, text: 'so welcome back to the garden' }, { t: 118, text: 'today we plant tomatoes' }, { t: 175, text: 'anyway back to the plants' }];
+  const ad = [{ t: 100, text: 'so welcome back to the garden' }, { t: 118, text: 'this video is sponsored by Surfshark' }, { t: 124, text: 'use code PLANTS for 80 percent off at surfshark dot com' }, { t: 175, text: 'anyway back to the plants' }];
+  it('a different track that finds an ad read adds a vote of its own', () => {
+    const v = verdictOf(page as never, { state: 'ok', lines: plain }, null, ad);
+    expect(v.votes.some((x) => x.method === 'captions' && x.said === 'yes')).toBe(true);
+    expect(v.sponsored).toBe(true);
+  });
+  it('the same words again add nothing', () => {
+    const v = verdictOf(page as never, { state: 'ok', lines: ad }, null, ad);
+    expect(v.votes.some((x) => x.method === 'captions')).toBe(false);
+  });
+  it('it stands in as the transcript when the first route read nothing', () => {
+    const v = verdictOf(page as never, { state: 'trouble', why: 'refused' }, null, ad);
+    expect(v.sponsored).toBe(true);
+    expect(v.brand?.toLowerCase()).toContain('surfshark');
   });
 });

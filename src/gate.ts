@@ -23,8 +23,6 @@ export function skipGate(m: Measured = MEASURED): SkipGate {
   return { open: missing.length === 0, missing };
 }
 
-/** The 6-month search itself is not built yet; the popup says so instead of showing "On". Set to true when it exists. */
-export const BACKFILL_BUILT = false;
 export type BackfillGate = { open: boolean; why: 'off' | 'no-index' | 'not-agreed' | null };
 export function backfillGate(a: { indexUrl: string; agreed: string | null; lookBack?: boolean }): BackfillGate {
   if (a.lookBack === false) return { open: false, why: 'off' }; // the person switched it off (it is on by default)

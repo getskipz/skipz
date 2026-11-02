@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { sponsorSaid, nameAfterCue, nameBeforeCue, byLabel, byDescription, byChapters, byTranscript, byComments, byAiRead, byWatch, combine, serviceOnly, adReaders, plainWordsOnly, isOwnName, scrubOwnBrand, burstsOf, type Vote } from './check';
+import { CUE, sponsorSaid, nameAfterCue, nameBeforeCue, byLabel, byDescription, byChapters, byTranscript, byComments, byAiRead, byWatch, combine, serviceOnly, adReaders, plainWordsOnly, isOwnName, scrubOwnBrand, burstsOf, type Vote } from './check';
 
 // Real cases from the maintainer's Chrome (2026-09-29) where known.
 const EXA = 'Exa gives your agents the largest index of public and private data. Get $20 in credits - https://dashboard.exa.ai/billing?coupon=x';
@@ -463,5 +463,142 @@ describe('a cue-based read that looks short is stretched (2026-10-22, two real v
     const v = byTranscript({ state: 'ok', lines }, ['Surfshark']);
     expect(v.end! - v.start!).toBeGreaterThanOrEqual(20);
     expect(v.proof).not.toContain('length is a guess');
+  });
+});
+
+describe('a review is not a sponsorship (maintainer, 2026-10-24: Ikko Mind One Pro)', () => {
+  const chap = { method: 'chapters', said: 'yes', brand: 'Ikko', score: 0.75, proof: 'Chapter "Ikko Mind One Pro" at 0:00', start: 0, end: 160 } as never;
+  const desc = { method: 'description', said: 'unknown', brand: 'Ikko', score: 0.4, proof: 'An offer link (Ikko)' } as never;
+  const title = 'I Love That Phones Are Fun Again | Ikko Mind One Pro';
+  it('a chapter and a link naming the product in the title no longer make it sponsored', () => {
+    expect(combine(scrubOwnBrand([chap, desc], [], title)).sponsored).toBe(false);
+    expect(combine(scrubOwnBrand([chap, desc], [])).sponsored).toBe(true); // without the title the old answer stands
+  });
+  it('a paid label or a spoken ad read keeps it a sponsor', () => {
+    const label = { method: 'label', said: 'yes', brand: null, score: 0.95, proof: 'YouTube says paid promotion' } as never;
+    expect(combine(scrubOwnBrand([label, chap, desc], [], title)).brand).toBe('Ikko');
+    const spoken = { method: 'transcript', said: 'yes', brand: 'Ikko', score: 0.9, proof: 'sponsored by Ikko', start: 60, end: 120 } as never;
+    expect(combine(scrubOwnBrand([spoken, chap, desc], [], title)).sponsored).toBe(true);
+  });
+  it('a brand that is not in the title is untouched', () => {
+    expect(combine(scrubOwnBrand([chap, desc], [], 'My favourite gadgets of the year')).sponsored).toBe(true);
+  });
+});
+
+describe('one brand heard with a different spelling (maintainer, 2026-10-24: Bookie.com vs Booking.com)', () => {
+  it('treats close spellings that start the same way as one brand, and real neighbours as two', async () => {
+    const { heardAlike } = await import('./check');
+    expect(heardAlike('Bookie.com', 'Booking.com')).toBe(true);
+    expect(heardAlike('Surfshark', 'Surfsharp')).toBe(true);
+    expect(heardAlike('Notion', 'Motion')).toBe(false);
+    expect(heardAlike('Nord', 'Norton')).toBe(false);
+    expect(heardAlike('Raycon', 'Raycast')).toBe(false);
+  });
+  it('the combined answer is no longer split between the two spellings', () => {
+    const spoken = { method: 'transcript', said: 'yes', brand: 'Bookie.com', score: 0.9, proof: 'brought to you by Bookie.com', start: 1214, end: 1280 } as never;
+    const written = { method: 'description', said: 'yes', brand: 'Booking.com', score: 0.85, proof: 'Sponsored by Booking.com' } as never;
+    const v = combine([spoken, written]);
+    expect(v.confidence).toBeGreaterThanOrEqual(0.9);
+    expect(v.brand).toBe('Booking.com'); // spelled as the creator wrote it
+  });
+});
+
+describe('what Skipz HEARS counts as a check (maintainer, 2026-10-24: listening is part of the sponsor answer)', () => {
+  it('a sponsor read heard on this computer backs a written clue and gives the time', () => {
+    const heard = byTranscript({ state: 'ok', lines: [{ t: 300, text: 'this part of the video is sponsored by Surfshark' }, { t: 306, text: 'surfshark is a vpn that works on every device' }, { t: 312, text: 'use code plants for eighty percent off' }, { t: 340, text: 'anyway back to the garden' }] }, ['Surfshark']);
+    expect(heard.said).toBe('yes');
+    const v = combine([{ ...heard, method: 'listening' }, byDescription('Sponsored by Surfshark: https://surfshark.com/plants', false)]);
+    expect(v.sponsored).toBe(true);
+    expect(v.brand?.toLowerCase()).toContain('surfshark');
+    expect(v.start).toBeGreaterThanOrEqual(295);
+    expect(v.start).toBeLessThanOrEqual(305);
+    expect(v.timeBy).toBe('listening');
+  });
+});
+
+describe('a brand of several words heard a little differently (Pixelmob Pro / "Pixel Moab Pro")', () => {
+  it('finds the spoken read of the written name', () => {
+    const r = byTranscript({ state: 'ok', lines: [{ t: 190, text: 'disclaimer. This video is sponsored by' }, { t: 194, text: 'the people that make the Pixel Moab Pro Unified' }, { t: 200, text: 'use the link in the description to save thirty one percent' }, { t: 230, text: 'anyway back to the video' }] }, ['Pixelmob Pro']);
+    expect(r.said).toBe('yes');
+    expect(r.brand).toBe('Pixelmob Pro');
+  });
+});
+
+describe('"are sponsoring" in any case is a sponsor cue (maintainer, 2026-10-26)', () => {
+  it.each(['are sponsoring', 'are Sponsoring', 'are SPONSORING', 'is sponsoring'])('names the brand before "%s"', (phrase) => {
+    const text = 'big thanks to Squarespace ' + phrase + ' this video';
+    expect(CUE.test(text)).toBe(true);
+    expect(nameBeforeCue(text)).toBe('Squarespace');
+  });
+  it('does not take a negation for a cue', () => {
+    expect(byTranscript({ state: 'ok', lines: [{ t: 5, text: 'nobody is sponsoring this video, I paid for it myself' }] }, []).said).not.toBe('yes');
+  });
+});
+
+describe('a soft sponsor mention: "my channel sponsor dbrand" (maintainer, 2026-10-26, JerryRigEverything iPhone Duo at 7:47)', () => {
+  const lines = [
+    { t: 455, text: 'value when you decide you do not like' }, { t: 459, text: 'folding phones anymore. True story, it happened to me with the Z flip' },
+    { t: 463, text: "guy. I'll leave a link for this easy to" }, { t: 465, text: 'install prism screen protector from my' }, { t: 467, text: 'channel sponsor dbrand down in the' }, { t: 468, text: 'description.' },
+    { t: 470, text: 'It is real glass. Well, I am not a folding guy.' }, { t: 475, text: 'titanium kind of guy. Apple just dropped a ton of money' },
+  ];
+  it('is a sponsor cue and names the brand', () => {
+    expect(CUE.test('from my channel sponsor dbrand down in the')).toBe(true);
+    expect(nameAfterCue('from my channel sponsor dbrand down in the')).toBe('Dbrand');
+  });
+  it('the transcript check finds it and marks the stretch', () => {
+    const r = byTranscript({ state: 'ok', lines }, ['Dbrand']);
+    expect(r.said).toBe('yes');
+    expect(r.brand?.toLowerCase()).toBe('dbrand');
+    expect(r.start).toBeGreaterThanOrEqual(455);
+    expect(r.start).toBeLessThanOrEqual(468);
+  });
+  it.each(['a sponsor is not required here', 'my sponsor read comes later'])('talk about sponsors in general is not a cue: %s', (t) => {
+    expect(byTranscript({ state: 'ok', lines: [{ t: 5, text: t }, { t: 9, text: 'back to the phone now' }] }, []).said).not.toBe('yes');
+  });
+});
+
+describe('a weak rival brand does not cancel a strong answer (maintainer, 2026-10-26: Fish Audio vs "Mrc")', () => {
+  const label = { method: 'label', said: 'yes', brand: null, score: 0.95, proof: 'YouTube shows paid promotion' } as never;
+  const spoken = { method: 'transcript', said: 'yes', brand: 'Fish Audio', score: 0.9, proof: 'thank you to Fish Audio for supporting this build', start: 808, end: 829 } as never;
+  const weak = { method: 'description', said: 'yes', brand: 'Mrc', score: 0.6, proof: 'a link' } as never;
+  it('keeps the marking line', () => {
+    const v = combine([label, weak, spoken]);
+    expect(v.brand).toBe('Fish Audio');
+    expect(v.confidence).toBeGreaterThanOrEqual(0.7);
+  });
+  it('two equally strong rivals still disagree', () => {
+    const rival = { method: 'description', said: 'yes', brand: 'Acme', score: 0.9, proof: 'Sponsored by Acme' } as never;
+    expect(combine([label, rival, spoken]).confidence).toBeLessThan(0.7);
+  });
+});
+
+describe('names that sound alike are one brand (recorded 2026-10-26: "Saily" heard as "Saylite")', () => {
+  it('matches by sound, and keeps real neighbours apart', async () => {
+    const { heardAlike } = await import('./check');
+    expect(heardAlike('Saily', 'Saylite')).toBe(true);
+    expect(heardAlike('Bookie.com', 'Booking.com')).toBe(true);
+    expect(heardAlike('Notion', 'Motion')).toBe(false);
+    expect(heardAlike('Raycon', 'Raycast')).toBe(false);
+    expect(heardAlike('Nord', 'Norton')).toBe(false);
+    expect(heardAlike('Squarespace', 'Squarespaces')).toBe(true);
+  });
+});
+
+// "Exposing The Biggest Design Scams" (bjE6HYuEA1k, maintainer's Edge test, 2026-11-01): AnyDesk is the one sponsor (6:15), but the Theranos story at 15:01 to 16:31 was marked as a second sponsor because
+// "partnered with" counted as a paid cue wherever it was said. A company partnering with another company in a story is not an ad; the creator saying THEY partnered with someone is.
+describe('"partnered with" is a cue only when the creator or the video is the one partnering', () => {
+  const story = ["15:03 experiment. So, Theranos partnered with Walgreens and opened Theranos wellness", "16:24 the company has famous board members and it's partnered with Walgreens, so surely somebody must have checked the science", 'their partnership with Walgreens was announced in 2013'];
+  it('does not treat a company story as a sponsor cue', () => {
+    for (const s of story) { expect(CUE.test(s)).toBe(false); expect(nameAfterCue(s)).toBeNull(); }
+  });
+  it('still hears the creator and the video partnering', () => {
+    expect(CUE.test("i've partnered with incogni for this one")).toBe(true);
+    expect(CUE.test('this video is in partnership with squarespace')).toBe(true);
+    expect(CUE.test('we are partnered with notion today')).toBe(true);
+    expect(nameAfterCue('this video is in partnership with Squarespace. Go to')).toBe('Squarespace');
+    expect(nameAfterCue('I partnered with Incogni to')).toBe('Incogni');
+  });
+  it('the AnyDesk read of the same video is still a sponsor read', () => {
+    expect(CUE.test("AnyDesk, who's sponsoring this video, is")).toBe(true);
   });
 });

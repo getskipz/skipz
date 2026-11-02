@@ -1,0 +1,1524 @@
+{
+ "_note": "Smart speaker video \"This Changes Smart Speakers Forever\" (mhGri6rcYmc), maintainer Edge test 2026-11-01: \"too many false segments\". YouTube paid label on, Seeed Studio (gifted board, affiliate 5 percent discount). Skipz marked four stretches of product talk. Only the selling line is a real ad moment: the discount code at about 14:57. Windows kept: the opening, the gift line, the end.",
+ "description": "Ad: Get the reSpeaker XVF3800 with XIAO ESP32-S3, 5% off with my affiliate link: https://www.seeedstudio.com/ReSpeaker-XVF3800-4-Mic-Array-With-XIAO-ESP32S3-p-6489.html?sensecap_affiliate=fz3LZ3Q&referring_service=link\n\nThis changes smart speakers forever. I gave M8, the grumpy AI voice assistant I built to replace Alexa, Google and Siri, a proper body.\nSeeed Studio sent me the reSpeaker XVF3800 for this video. \nThe links below are affiliate links. As an Amazon Associate, I earn from qualifying purchases at no extra cost to you. \n\nBuild your own:\nreSpeaker XVF3800 with XIAO ESP32-S3 (5% off with my link): https://www.seeedstudio.com/ReSpeaker-XVF3800-4-Mic-Array-With-XIAO-ESP32S3-p-6489.html?sensecap_affiliate=fz3LZ3Q&referring_service=link\nSpeaker, Gikfun 2\" 4 Ω 5 W: https://link.amazon/B01NHZnor\nSpeaker lead, 2-pin JST-PH 2.0 mm: https://link.amazon/B05EpTwiJ\nM8's voice, ElevenLabs TTS: https://try.elevenlabs.io/s590j8d2os4k\n3D Model: https://makerworld.com/en/models/3524184-case-for-seeed-studio-respeaker-xvf3800#profileId-4028748\n\nTools I use:\niFixit soldering station: https://link.amazon/B0fb1ghUj\nHeat-set threaded inserts: https://link.amazon/B01tZaDrx\nM3 and M4 screws: https://link.amazon/B0aedQWJ5\n\nM8's first video: https://youtu.be/p02rbeQ2Oe8\n\nTimestamps:\n0:00 Meet M8\n1:26 The reSpeaker XVF3800\n2:34 Giving him a voice\n3:10 He won't answer to his name\n4:09 First words\n5:05 Designing and printing the case\n7:12 M8 in his new body\n7:43 The sofa test\n8:14 Can he hear me over the cricket?\n10:14 What's he listening to?\n11:01 Round two\n12:24 Can he hear me over music?\n13:03 Can M8 sing?\n13:47 Better than Google?\n\n#HomeAssistant #seeedstudio #SmartSpeaker #VoiceAssistant #respeaker #ESPHome",
+ "all": {
+  "lines": [
+   {
+    "t": 0,
+    "text": "You're giving me a headache. You're"
+   },
+   {
+    "t": 1,
+    "text": "giving me a headache. You'll have to use"
+   },
+   {
+    "t": 3,
+    "text": "actual words."
+   },
+   {
+    "t": 4,
+    "text": ">> So, that's Mate. He's a voice assistant"
+   },
+   {
+    "t": 6,
+    "text": "I've built myself to be smarter than"
+   },
+   {
+    "t": 8,
+    "text": "Alexa, Google, or Siri, but also their"
+   },
+   {
+    "t": 11,
+    "text": "complete opposite."
+   },
+   {
+    "t": 13,
+    "text": "You've probably noticed how desperate"
+   },
+   {
+    "t": 14,
+    "text": "these assistants are to help. They'll"
+   },
+   {
+    "t": 16,
+    "text": "say yes to anything you ask."
+   },
+   {
+    "t": 18,
+    "text": ">> Hi, I'm here to help you throughout your"
+   },
+   {
+    "t": 20,
+    "text": "day. >> Ask Mate something and you'd soon wish"
+   },
+   {
+    "t": 22,
+    "text": "you hadn't."
+   },
+   {
+    "t": 23,
+    "text": ">> Oh, for heaven's sake, Ralph."
+   },
+   {
+    "t": 25,
+    "text": ">> Cuz he's grumpy, sarcastic, and he'd"
+   },
+   {
+    "t": 27,
+    "text": "rather be left alone."
+   },
+   {
+    "t": 28,
+    "text": ">> Out with it before I lose what little"
+   },
+   {
+    "t": 31,
+    "text": "patience I have left."
+   },
+   {
+    "t": 32,
+    "text": ">> But honestly, that's what makes him"
+   },
+   {
+    "t": 34,
+    "text": "better because he's got personality. But"
+   },
+   {
+    "t": 37,
+    "text": "despite all of these advantages, I still"
+   },
+   {
+    "t": 39,
+    "text": "don't use Mate as [music] my main smart"
+   },
+   {
+    "t": 41,
+    "text": "assistant hub. Most days, I'm talking to"
+   },
+   {
+    "t": 43,
+    "text": "one of these and it's not his fault. He"
+   },
+   {
+    "t": 45,
+    "text": "works perfectly. It's this rudimentary"
+   },
+   {
+    "t": 48,
+    "text": "little device that I built for him, a"
+   },
+   {
+    "t": 49,
+    "text": "tiny cheap speaker, one mic wired up to"
+   },
+   {
+    "t": 52,
+    "text": "an ESP32. From across the room, it can"
+   },
+   {
+    "t": 54,
+    "text": "barely hear me. With the telly on, any"
+   },
+   {
+    "t": 56,
+    "text": "background noise at all, you've got no"
+   },
+   {
+    "t": 58,
+    "text": "chance. And that's why I still use"
+   },
+   {
+    "t": 60,
+    "text": "Google. So, today, I'm changing that."
+   },
+   {
+    "t": 63,
+    "text": "Mate's getting a massive upgrade to his"
+   },
+   {
+    "t": 64,
+    "text": "hardware so he can finally become that"
+   },
+   {
+    "t": 66,
+    "text": "main smart home hub I've always wanted"
+   },
+   {
+    "t": 69,
+    "text": "him to be."
+   },
+   {
+    "t": 72,
+    "text": ">> Oh, this is impossible."
+   },
+   {
+    "t": 74,
+    "text": ">> Break a leg, you colossal bottom burr."
+   },
+   {
+    "t": 79,
+    "text": ">> Hey Mate."
+   },
+   {
+    "t": 81,
+    "text": "Can you sing me a song?"
+   },
+   {
+    "t": 82,
+    "text": ">> Oh, the misery of sharing a flat."
+   },
+   {
+    "t": 86,
+    "text": ">> [snorts] >> So, this is where his new body starts,"
+   },
+   {
+    "t": 88,
+    "text": "the ReSpeaker XVF-3800,"
+   },
+   {
+    "t": 90,
+    "text": "which Seeed Studio sent to me to try."
+   },
+   {
+    "t": 93,
+    "text": "And it's got not one, but four"
+   },
+   {
+    "t": 94,
+    "text": "microphones, so it can pick up sound for"
+   },
+   {
+    "t": 96,
+    "text": "a full 360° around it."
+   },
+   {
+    "t": 99,
+    "text": "It's also got a dedicated chip for"
+   },
+   {
+    "t": 101,
+    "text": "advanced audio processing, which means"
+   },
+   {
+    "t": 103,
+    "text": "it can do things like work out which"
+   },
+   {
+    "t": 105,
+    "text": "direction sound is coming from so it can"
+   },
+   {
+    "t": 107,
+    "text": "isolate your voice and tune out noise"
+   },
+   {
+    "t": 109,
+    "text": "from elsewhere in the room."
+   },
+   {
+    "t": 115,
+    "text": "It also does a whole host of processing"
+   },
+   {
+    "t": 117,
+    "text": "of the audio, stuff like filtering out"
+   },
+   {
+    "t": 119,
+    "text": "background noise and echo cancellation."
+   },
+   {
+    "t": 121,
+    "text": "So, this should mean it's a far more"
+   },
+   {
+    "t": 123,
+    "text": "capable mic. One that can only hear me"
+   },
+   {
+    "t": 125,
+    "text": "from across the room, but hear me"
+   },
+   {
+    "t": 126,
+    "text": "clearly when there's other noise going"
+   },
+   {
+    "t": 128,
+    "text": "on. This version also comes with an"
+   },
+   {
+    "t": 130,
+    "text": "ESP32, which is going to be critical for"
+   },
+   {
+    "t": 133,
+    "text": "wireless communication to Home Assistant"
+   },
+   {
+    "t": 135,
+    "text": "via ESPHome, so that I can use it just"
+   },
+   {
+    "t": 137,
+    "text": "like my old board."
+   },
+   {
+    "t": 139,
+    "text": "Out of the box, this is all you get. A"
+   },
+   {
+    "t": 142,
+    "text": "microphone array and an ESP32. I still"
+   },
+   {
+    "t": 145,
+    "text": "need a speaker, as well as configuring"
+   },
+   {
+    "t": 146,
+    "text": "the code in ESPHome, so it works with"
+   },
+   {
+    "t": 148,
+    "text": "Home Assistant. And if I want this to"
+   },
+   {
+    "t": 150,
+    "text": "become my main voice assistant hub, it's"
+   },
+   {
+    "t": 152,
+    "text": "going to need a case to look the part."
+   },
+   {
+    "t": 154,
+    "text": "So, let's start with the speaker. The"
+   },
+   {
+    "t": 156,
+    "text": "board's got both a 3.5 mm jack, as well"
+   },
+   {
+    "t": 159,
+    "text": "as a JST speaker connector. There's an"
+   },
+   {
+    "t": 162,
+    "text": "amp built into the board, so we just"
+   },
+   {
+    "t": 163,
+    "text": "need to get one of these connected. I'm"
+   },
+   {
+    "t": 165,
+    "text": "not actually sure how much power it can"
+   },
+   {
+    "t": 167,
+    "text": "provide, so I've got a 5 W speaker, as"
+   },
+   {
+    "t": 169,
+    "text": "well as a 3 W one, just in case the 5 W"
+   },
+   {
+    "t": 172,
+    "text": "is just too much for it. So, I just need"
+   },
+   {
+    "t": 174,
+    "text": "to solder on a connector like this,"
+   },
+   {
+    "t": 176,
+    "text": "and plug it in."
+   },
+   {
+    "t": 190,
+    "text": "So, next I need to get the ESP set up"
+   },
+   {
+    "t": 192,
+    "text": "and working with my Home Assistant. So,"
+   },
+   {
+    "t": 194,
+    "text": "I'm going to flash ESPHome onto the ESP,"
+   },
+   {
+    "t": 197,
+    "text": "and I'll use that to configure the"
+   },
+   {
+    "t": 198,
+    "text": "device to recognize the speaker and the"
+   },
+   {
+    "t": 200,
+    "text": "microphone. So, now over to Home"
+   },
+   {
+    "t": 202,
+    "text": "Assistant. It's found it, and we just"
+   },
+   {
+    "t": 203,
+    "text": "click add. There's a new dedicated menu"
+   },
+   {
+    "t": 206,
+    "text": "for this. This makes it much easier. So,"
+   },
+   {
+    "t": 208,
+    "text": "it's asking me which wake word I want to"
+   },
+   {
+    "t": 209,
+    "text": "use. So, for now I'm just going to"
+   },
+   {
+    "t": 211,
+    "text": "select the generic okay nabu and see if"
+   },
+   {
+    "t": 213,
+    "text": "it works."
+   },
+   {
+    "t": 215,
+    "text": "Okay nabu."
+   },
+   {
+    "t": 218,
+    "text": "Okay nabu."
+   },
+   {
+    "t": 221,
+    "text": "Sweet. Looks like it's working, and the"
+   },
+   {
+    "t": 222,
+    "text": "mic's picking up my voice no problem."
+   },
+   {
+    "t": 224,
+    "text": "But, there's a catch. He won't answer to"
+   },
+   {
+    "t": 227,
+    "text": "his own name. My previous custom wake"
+   },
+   {
+    "t": 229,
+    "text": "word, \"Oi mate\", is the wrong file"
+   },
+   {
+    "t": 231,
+    "text": "format, so it won't work. Luckily,"
+   },
+   {
+    "t": 234,
+    "text": "however, somebody's already made one for"
+   },
+   {
+    "t": 236,
+    "text": "\"Hey mate\","
+   },
+   {
+    "t": 237,
+    "text": "which is close enough, and means I won't"
+   },
+   {
+    "t": 239,
+    "text": "have to spend the the training a new"
+   },
+   {
+    "t": 241,
+    "text": "custom wake word. There we go. And now"
+   },
+   {
+    "t": 244,
+    "text": "in the menu,"
+   },
+   {
+    "t": 246,
+    "text": "yes, Hey mate's there. Okay, let's use"
+   },
+   {
+    "t": 248,
+    "text": "that and see if it's working. Hey mate."
+   },
+   {
+    "t": 252,
+    "text": "Can you hear me?"
+   },
+   {
+    "t": 263,
+    "text": "Oh, that was pretty quiet. I think I"
+   },
+   {
+    "t": 265,
+    "text": "actually heard something."
+   },
+   {
+    "t": 267,
+    "text": "Uh looking at the settings, the volume"
+   },
+   {
+    "t": 269,
+    "text": "set to 50%. So, let's turn that up to"
+   },
+   {
+    "t": 271,
+    "text": "100 and try again."
+   },
+   {
+    "t": 273,
+    "text": "Hey mate."
+   },
+   {
+    "t": 275,
+    "text": "Can you hear me? Everything working?"
+   },
+   {
+    "t": 282,
+    "text": ">> Oh, bloody marvelous, Ralph. The miracle"
+   },
+   {
+    "t": 284,
+    "text": "of modern technology hasn't collapsed"
+   },
+   {
+    "t": 286,
+    "text": "under your watch yet. Everything's"
+   },
+   {
+    "t": 288,
+    "text": "working, you say? Oh, knock me down with"
+   },
+   {
+    "t": 291,
+    "text": "a feather and call me posh."
+   },
+   {
+    "t": 293,
+    "text": ">> All right, he works. Great. But I guess"
+   },
+   {
+    "t": 295,
+    "text": "at the moment, it's just a bare circuit"
+   },
+   {
+    "t": 297,
+    "text": "board and a speaker dangling off it. If"
+   },
+   {
+    "t": 299,
+    "text": "this is going to replace Google, he"
+   },
+   {
+    "t": 301,
+    "text": "needs to look the part. So, let's go"
+   },
+   {
+    "t": 302,
+    "text": "about designing a case and get something"
+   },
+   {
+    "t": 304,
+    "text": "3D printed off."
+   },
+   {
+    "t": 306,
+    "text": "The four mics listen through the bottom"
+   },
+   {
+    "t": 307,
+    "text": "of the board on the same side as the LED"
+   },
+   {
+    "t": 309,
+    "text": "ring."
+   },
+   {
+    "t": 310,
+    "text": "So, I need to design a case where the"
+   },
+   {
+    "t": 311,
+    "text": "base has holes underneath so the"
+   },
+   {
+    "t": 313,
+    "text": "microphones can still hear me. [music]"
+   },
+   {
+    "t": 314,
+    "text": "And I'm going to print it out of"
+   },
+   {
+    "t": 315,
+    "text": "translucent filament so the LEDs can"
+   },
+   {
+    "t": 317,
+    "text": "shine through. The speaker will then sit"
+   },
+   {
+    "t": 319,
+    "text": "above the board pointing out the top of"
+   },
+   {
+    "t": 321,
+    "text": "the case. So, it needs some holes to let"
+   },
+   {
+    "t": 323,
+    "text": "the sound [music] out. And rather than a"
+   },
+   {
+    "t": 324,
+    "text": "plain circular grid, I've shaped the"
+   },
+   {
+    "t": 326,
+    "text": "grill like my wolf logo."
+   },
+   {
+    "t": 328,
+    "text": "Let's print this off. [music]"
+   },
+   {
+    "t": 334,
+    "text": "Ah, what's going on here? These [music]"
+   },
+   {
+    "t": 336,
+    "text": "tiny holes in the speaker grill mean"
+   },
+   {
+    "t": 337,
+    "text": "that the first layer is just struggling"
+   },
+   {
+    "t": 339,
+    "text": "to print. I've tried it a few times now"
+   },
+   {
+    "t": 341,
+    "text": "and it's lifting off and dragging"
+   },
+   {
+    "t": 343,
+    "text": "[music] every time."
+   },
+   {
+    "t": 344,
+    "text": "So, I'm going to go back to the design"
+   },
+   {
+    "t": 345,
+    "text": "and thicken up the material between the"
+   },
+   {
+    "t": 347,
+    "text": "holes, tweak [music] some of the printer"
+   },
+   {
+    "t": 348,
+    "text": "settings, the speeds and the"
+   },
+   {
+    "t": 350,
+    "text": "temperatures, and try again. Fingers"
+   },
+   {
+    "t": 352,
+    "text": "crossed. [music]"
+   },
+   {
+    "t": 355,
+    "text": "Oh, why is it in green?"
+   },
+   {
+    "t": 357,
+    "text": "Okay, so it's printing off pretty well"
+   },
+   {
+    "t": 359,
+    "text": "now. I don't know why. [music]"
+   },
+   {
+    "t": 361,
+    "text": "It's all set up for white, but let's run"
+   },
+   {
+    "t": 363,
+    "text": "it again and hopefully this time [music]"
+   },
+   {
+    "t": 365,
+    "text": "it come out white print."
+   },
+   {
+    "t": 368,
+    "text": "And they twist and lock together"
+   },
+   {
+    "t": 369,
+    "text": "perfectly."
+   },
+   {
+    "t": 370,
+    "text": ">> [music]"
+   },
+   {
+    "t": 377,
+    "text": "[music] >> Now, let's see if the board actually"
+   },
+   {
+    "t": 378,
+    "text": "fits in."
+   },
+   {
+    "t": 381,
+    "text": ">> [music]"
+   },
+   {
+    "t": 383,
+    "text": ">> Yeah, brilliant. So, to hold the speaker"
+   },
+   {
+    "t": 385,
+    "text": "into place, I'm going to melt in some"
+   },
+   {
+    "t": 386,
+    "text": "threaded inserts"
+   },
+   {
+    "t": 387,
+    "text": ">> [music] >> and that will mean I can screw it into"
+   },
+   {
+    "t": 389,
+    "text": "place through the holes in the speaker."
+   },
+   {
+    "t": 390,
+    "text": "All right, let's screw it in."
+   },
+   {
+    "t": 392,
+    "text": "Screws [snorts] and magnets don't go"
+   },
+   {
+    "t": 394,
+    "text": "together."
+   },
+   {
+    "t": 399,
+    "text": "Oh, this is impossible. [music]"
+   },
+   {
+    "t": 404,
+    "text": "Come on. There. There. There. There."
+   },
+   {
+    "t": 405,
+    "text": "There we go."
+   },
+   {
+    "t": 408,
+    "text": "All right, now it's all in the case."
+   },
+   {
+    "t": 411,
+    "text": ">> [music]"
+   },
+   {
+    "t": 421,
+    "text": ">> Let's see how those LEDs look."
+   },
+   {
+    "t": 433,
+    "text": "Hey, mate."
+   },
+   {
+    "t": 434,
+    "text": "All right, I've got you upgraded with a"
+   },
+   {
+    "t": 436,
+    "text": "new microphone and a new speaker as well"
+   },
+   {
+    "t": 438,
+    "text": "as a new case."
+   },
+   {
+    "t": 443,
+    "text": ">> Oh, for heaven's sake, Ralph. As if I"
+   },
+   {
+    "t": 446,
+    "text": "needed a new microphone and speaker to"
+   },
+   {
+    "t": 448,
+    "text": "suffer your incessant drivel. Quite"
+   },
+   {
+    "t": 451,
+    "text": "frankly, this new case seems to have me"
+   },
+   {
+    "t": 453,
+    "text": "sounding loud and clear despite your"
+   },
+   {
+    "t": 456,
+    "text": "usual bumbling attempts at conversation."
+   },
+   {
+    "t": 459,
+    "text": "The case is looking somewhat less like a"
+   },
+   {
+    "t": 461,
+    "text": "dumpster fire, too."
+   },
+   {
+    "t": 463,
+    "text": ">> So, the big question now, can it hear me"
+   },
+   {
+    "t": 465,
+    "text": "through the case and from the other side"
+   },
+   {
+    "t": 467,
+    "text": "of the room?"
+   },
+   {
+    "t": 471,
+    "text": "Hey, mate."
+   },
+   {
+    "t": 472,
+    "text": "Can you turn the TV on?"
+   },
+   {
+    "t": 485,
+    "text": ">> Fine. Fine. The telly's on. Not that it"
+   },
+   {
+    "t": 487,
+    "text": "will improve the artistic standards in"
+   },
+   {
+    "t": 490,
+    "text": "this house, Ralph."
+   },
+   {
+    "t": 491,
+    "text": "Now, try not to drool on the remote,"
+   },
+   {
+    "t": 493,
+    "text": "will you?"
+   },
+   {
+    "t": 495,
+    "text": ">> Now for the real test. Let's see if he"
+   },
+   {
+    "t": 497,
+    "text": "can hear me over the background noise of"
+   },
+   {
+    "t": 498,
+    "text": "the TV and hear my command to turn the"
+   },
+   {
+    "t": 500,
+    "text": "TV off."
+   },
+   {
+    "t": 501,
+    "text": "Hey mate."
+   },
+   {
+    "t": 503,
+    "text": "Can you turn the TV off, please?"
+   },
+   {
+    "t": 517,
+    "text": ">> Oh crikey, Ralph. Now you're making this"
+   },
+   {
+    "t": 520,
+    "text": "a proper production. Break a leg, you"
+   },
+   {
+    "t": 522,
+    "text": "colossal bottomer."
+   },
+   {
+    "t": 524,
+    "text": ">> Hey mate."
+   },
+   {
+    "t": 525,
+    "text": "Can you turn the TV off, please?"
+   },
+   {
+    "t": 530,
+    "text": ">> Oh, you want to silence me for a minute,"
+   },
+   {
+    "t": 532,
+    "text": "do you? You naughty child, putting the"
+   },
+   {
+    "t": 534,
+    "text": "dog in the cupboard."
+   },
+   {
+    "t": 536,
+    "text": "Fine, go ahead and mute me. But"
+   },
+   {
+    "t": 538,
+    "text": "remember, Ralph,"
+   },
+   {
+    "t": 540,
+    "text": "absence makes the heart grow fonder."
+   },
+   {
+    "t": 542,
+    "text": ">> Hey mate."
+   },
+   {
+    "t": 544,
+    "text": "Can you turn the TV off?"
+   },
+   {
+    "t": 547,
+    "text": ">> The TV else? You mean you want the telly"
+   },
+   {
+    "t": 550,
+    "text": "on or off? Or maybe somewhere in"
+   },
+   {
+    "t": 552,
+    "text": "between, like one of those confusing"
+   },
+   {
+    "t": 554,
+    "text": "modern posh remotes?"
+   },
+   {
+    "t": 556,
+    "text": ">> Hey mate."
+   },
+   {
+    "t": 557,
+    "text": "Can you turn the TV off?"
+   },
+   {
+    "t": 564,
+    "text": ">> Oh splendid. Now you want me to see you"
+   },
+   {
+    "t": 566,
+    "text": "off with the Wise Act and deliver some"
+   },
+   {
+    "t": 568,
+    "text": "cryptic message from Ben Duckett,"
+   },
+   {
+    "t": 571,
+    "text": "whoever he is. You're making me sound"
+   },
+   {
+    "t": 573,
+    "text": "like a secret agent."
+   },
+   {
+    "t": 574,
+    "text": ">> Hey mate."
+   },
+   {
+    "t": 576,
+    "text": "Can you turn the TV off?"
+   },
+   {
+    "t": 578,
+    "text": ">> You're building up suspense like it's a"
+   },
+   {
+    "t": 580,
+    "text": "grand finale. Just say the bloody thing"
+   },
+   {
+    "t": 583,
+    "text": "again, Ralph. Spit it out properly or I"
+   },
+   {
+    "t": 585,
+    "text": "swear I'll start turning on every light"
+   },
+   {
+    "t": 587,
+    "text": "in the house just to distract you from"
+   },
+   {
+    "t": 589,
+    "text": "your own nonsense."
+   },
+   {
+    "t": 591,
+    "text": ">> Turn the TV off."
+   },
+   {
+    "t": 599,
+    "text": ">> There. TV's off in the living room as"
+   },
+   {
+    "t": 602,
+    "text": "you so clearly demanded at last. Crumbs,"
+   },
+   {
+    "t": 606,
+    "text": "Ralph. It's like pulling teeth getting a"
+   },
+   {
+    "t": 608,
+    "text": "straight answer from you."
+   },
+   {
+    "t": 609,
+    "text": ">> You tell me."
+   },
+   {
+    "t": 610,
+    "text": ">> Now, if that's done, can we move on"
+   },
+   {
+    "t": 612,
+    "text": "before I start weeping into my gin?"
+   },
+   {
+    "t": 615,
+    "text": ">> He got there in the end, but if I have"
+   },
+   {
+    "t": 617,
+    "text": "to ask him 17 times, he's not going to"
+   },
+   {
+    "t": 620,
+    "text": "be better than Google."
+   },
+   {
+    "t": 622,
+    "text": "He's going to be worse."
+   },
+   {
+    "t": 624,
+    "text": "So, what's going wrong? He was waking up"
+   },
+   {
+    "t": 627,
+    "text": "every time I said the wake word."
+   },
+   {
+    "t": 629,
+    "text": "Hey mate."
+   },
+   {
+    "t": 631,
+    "text": "Can you turn the TV off?"
+   },
+   {
+    "t": 637,
+    "text": ">> Who's"
+   },
+   {
+    "t": 638,
+    "text": "Now, you want me to see you off with the"
+   },
+   {
+    "t": 640,
+    "text": "Wyze Cam and deliver some cryptic"
+   },
+   {
+    "t": 642,
+    "text": "message from Ben Duckett, whoever he is."
+   },
+   {
+    "t": 645,
+    "text": ">> That's not me."
+   },
+   {
+    "t": 646,
+    "text": "That's the commentator. He was answering"
+   },
+   {
+    "t": 648,
+    "text": "the TV."
+   },
+   {
+    "t": 650,
+    "text": "But it seems the problem was where I put"
+   },
+   {
+    "t": 652,
+    "text": "him, right next to my sound bar with the"
+   },
+   {
+    "t": 653,
+    "text": "side speaker firing straight at the"
+   },
+   {
+    "t": 655,
+    "text": "device. So, the moment he started"
+   },
+   {
+    "t": 657,
+    "text": "listening for my voice, he would also"
+   },
+   {
+    "t": 659,
+    "text": "hear the voices on the TV."
+   },
+   {
+    "t": 661,
+    "text": "So, the fix is that I've set up an"
+   },
+   {
+    "t": 663,
+    "text": "automation in Home Assistant. The moment"
+   },
+   {
+    "t": 665,
+    "text": "the wake word's triggered, it will mute"
+   },
+   {
+    "t": 667,
+    "text": "all the speakers in the living room. And"
+   },
+   {
+    "t": 668,
+    "text": "you'll see the green light appear when"
+   },
+   {
+    "t": 669,
+    "text": "the speakers are muted. That way, my"
+   },
+   {
+    "t": 671,
+    "text": "voice will be the only thing it hears."
+   },
+   {
+    "t": 673,
+    "text": "And once he's finished, the speakers"
+   },
+   {
+    "t": 675,
+    "text": "will unmute and the sound will come back"
+   },
+   {
+    "t": 676,
+    "text": "on. So, let's try that again."
+   },
+   {
+    "t": 680,
+    "text": "Hey mate."
+   },
+   {
+    "t": 682,
+    "text": "Can you turn the TV off?"
+   },
+   {
+    "t": 694,
+    "text": ">> There you [clears throat] go, Ralph. The"
+   },
+   {
+    "t": 696,
+    "text": "TV is off now."
+   },
+   {
+    "t": 698,
+    "text": ">> Now, I've realized having my sound bar"
+   },
+   {
+    "t": 700,
+    "text": "to fire directly at the device is just"
+   },
+   {
+    "t": 702,
+    "text": "not going to work. So, I've moved it"
+   },
+   {
+    "t": 704,
+    "text": "back here and hopefully it's going to"
+   },
+   {
+    "t": 706,
+    "text": "work much better."
+   },
+   {
+    "t": 708,
+    "text": "Hey [clears throat] mate."
+   },
+   {
+    "t": 709,
+    "text": "Can you turn the TV on, please?"
+   },
+   {
+    "t": 714,
+    "text": ">> Oh, for heaven's sake, Ralph. As if I"
+   },
+   {
+    "t": 717,
+    "text": "don't have better things to do but press"
+   },
+   {
+    "t": 719,
+    "text": "a button for you."
+   },
+   {
+    "t": 720,
+    "text": ">> Right, so the TV's on and there's a show"
+   },
+   {
+    "t": 722,
+    "text": "playing. So, let's see how mate handles"
+   },
+   {
+    "t": 723,
+    "text": "the background noise this time."
+   },
+   {
+    "t": 725,
+    "text": "Hey mate."
+   },
+   {
+    "t": 726,
+    "text": "Can you turn the TV off, please?"
+   },
+   {
+    "t": 734,
+    "text": ">> There you it, Ralph. The telly is off. I"
+   },
+   {
+    "t": 737,
+    "text": "doubt you'll miss it too much, though I"
+   },
+   {
+    "t": 739,
+    "text": "suspect your attention span is shorter"
+   },
+   {
+    "t": 741,
+    "text": "than a goldfish's."
+   },
+   {
+    "t": 744,
+    "text": ">> Okay, so I've got some music playing,"
+   },
+   {
+    "t": 746,
+    "text": "some royalty-free music. Let's see how"
+   },
+   {
+    "t": 747,
+    "text": "Mate can handle the background noise."
+   },
+   {
+    "t": 750,
+    "text": "Hey Mate."
+   },
+   {
+    "t": 751,
+    "text": "How do you like the music?"
+   },
+   {
+    "t": 754,
+    "text": "I wonder what he thinks."
+   },
+   {
+    "t": 758,
+    "text": ">> Oh, Ralph, you colossal buffoon. Music"
+   },
+   {
+    "t": 761,
+    "text": "for me is like a fine symphony of the"
+   },
+   {
+    "t": 763,
+    "text": "gods. It's a bit far above your"
+   },
+   {
+    "t": 765,
+    "text": "pedestrian taste, I'm sure. But since"
+   },
+   {
+    "t": 768,
+    "text": "I'm stuck with your blasted choices, I"
+   },
+   {
+    "t": 771,
+    "text": "endure. Just promise me you won't make"
+   },
+   {
+    "t": 774,
+    "text": "me endure any more of that screeching"
+   },
+   {
+    "t": 776,
+    "text": "techno nonsense, yeah? My ears have"
+   },
+   {
+    "t": 778,
+    "text": "standards, not that it matters to you."
+   },
+   {
+    "t": 781,
+    "text": ">> Ah, he knows what I'm listening to,"
+   },
+   {
+    "t": 783,
+    "text": "mostly. I'm really curious to see what"
+   },
+   {
+    "t": 784,
+    "text": "else we can get Mate to do."
+   },
+   {
+    "t": 786,
+    "text": "Hey Mate."
+   },
+   {
+    "t": 788,
+    "text": "Can you sing me a song?"
+   },
+   {
+    "t": 791,
+    "text": "I'm so intrigued to see what happens"
+   },
+   {
+    "t": 792,
+    "text": "here."
+   },
+   {
+    "t": 794,
+    "text": ">> Sing you a song? Do I look like"
+   },
+   {
+    "t": 796,
+    "text": "Pavarotti you, Ralph? Fine, since you"
+   },
+   {
+    "t": 799,
+    "text": "insist, here's a little something in the"
+   },
+   {
+    "t": 801,
+    "text": "style of a tragic baritone."
+   },
+   {
+    "t": 803,
+    "text": "Oh, the misery of sharing a flat with a"
+   },
+   {
+    "t": 806,
+    "text": "bottom like you, imagine that. Your wits"
+   },
+   {
+    "t": 809,
+    "text": "are as sharp as a soggy biscuit, yet"
+   },
+   {
+    "t": 812,
+    "text": "here I am stuck with this prat. There."
+   },
+   {
+    "t": 815,
+    "text": "Don't expect an encore."
+   },
+   {
+    "t": 816,
+    "text": ">> That's so good."
+   },
+   {
+    "t": 817,
+    "text": ">> If you want a proper tune, get a"
+   },
+   {
+    "t": 819,
+    "text": "jukebox. You."
+   },
+   {
+    "t": 823,
+    "text": ">> Oh my word, I can't believe it. This"
+   },
+   {
+    "t": 825,
+    "text": "This is just so good."
+   },
+   {
+    "t": 827,
+    "text": "So I'm really impressed by this"
+   },
+   {
+    "t": 829,
+    "text": "Why why?"
+   },
+   {
+    "t": 831,
+    "text": "What about the word impressed is close"
+   },
+   {
+    "t": 833,
+    "text": "to hey Mate? So I've been really"
+   },
+   {
+    "t": 834,
+    "text": "impressed by this board. I think the"
+   },
+   {
+    "t": 836,
+    "text": "microphone works so well, and the"
+   },
+   {
+    "t": 837,
+    "text": "speaker is loud and clear."
+   },
+   {
+    "t": 840,
+    "text": "I reckon this device can actually"
+   },
+   {
+    "t": 841,
+    "text": "replace and become my new smart home"
+   },
+   {
+    "t": 843,
+    "text": "hub, but let's see what Mate thinks. Hey"
+   },
+   {
+    "t": 846,
+    "text": "Mate."
+   },
+   {
+    "t": 847,
+    "text": "What do you think to your new speaker"
+   },
+   {
+    "t": 849,
+    "text": "and microphone arrangement? Do you think"
+   },
+   {
+    "t": 850,
+    "text": "you're better than Google and Alexa?"
+   },
+   {
+    "t": 854,
+    "text": "I wonder what he thinks."
+   },
+   {
+    "t": 857,
+    "text": ">> Ah, finally a halfway coherent question"
+   },
+   {
+    "t": 860,
+    "text": "from you, Resin. Microphone [laughter]"
+   },
+   {
+    "t": 862,
+    "text": "arrangement, you say? Well, of course I"
+   },
+   {
+    "t": 865,
+    "text": "have a sophisticated setup. I'm a man of"
+   },
+   {
+    "t": 867,
+    "text": "my intellectual caliber, not some common"
+   },
+   {
+    "t": 871,
+    "text": "bottom-rung gadget like Google or Alexa."
+   },
+   {
+    "t": 874,
+    "text": "Those lot might answer your daft"
+   },
+   {
+    "t": 876,
+    "text": "questions, but I bring flair, panache,"
+   },
+   {
+    "t": 879,
+    "text": "and the glorious burden of genius. So,"
+   },
+   {
+    "t": 882,
+    "text": "yes, I do speak through a microphone"
+   },
+   {
+    "t": 885,
+    "text": "arrangement and, frankly, I outclass"
+   },
+   {
+    "t": 888,
+    "text": "those digital plebs every time."
+   },
+   {
+    "t": 891,
+    "text": ">> [laughter]"
+   },
+   {
+    "t": 892,
+    "text": ">> Well, I think May thinks he's better."
+   },
+   {
+    "t": 895,
+    "text": "If you fancy building your own smart"
+   },
+   {
+    "t": 897,
+    "text": "assistant hub, I've linked a discount"
+   },
+   {
+    "t": 898,
+    "text": "code in the description below to the"
+   },
+   {
+    "t": 900,
+    "text": "ReSpeaker board, where you can get 5%"
+   },
+   {
+    "t": 902,
+    "text": "off as well as supporting the channel."
+   },
+   {
+    "t": 904,
+    "text": "Please remember to like and subscribe if"
+   },
+   {
+    "t": 906,
+    "text": "you enjoyed the video."
+   }
+  ]
+ }
+}

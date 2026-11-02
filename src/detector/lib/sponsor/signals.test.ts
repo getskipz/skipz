@@ -95,3 +95,15 @@ describe('tidyBrand: a small model\'s brand name is cleaned or dropped', () => {
     expect(tidyBrand(null)).toBeNull();
   });
 });
+
+describe('partnership talk about other companies (Theranos story, 2026-11-01) is not an ad', () => {
+  it('a company partnering with another is no paid read', () => {
+    expect(classifyAd('So, Theranos partnered with Walgreens and opened wellness centers inside 41 of its stores').kind).not.toBe('paid');
+    expect(classifyAd("The company has famous board members and it's partnered with Walgreens, so surely somebody must have checked").kind).not.toBe('paid');
+  });
+  it('the creator or the video partnering is', () => {
+    expect(classifyAd("I've partnered with Incogni for this video").kind).toBe('paid');
+    expect(classifyAd('This video is in partnership with Squarespace').kind).toBe('paid');
+    expect(classifyAd('This is a paid partnership with Notion').kind).toBe('paid');
+  });
+});

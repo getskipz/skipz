@@ -1,0 +1,411 @@
+{
+ "_note": "Design Theory, Exposing The Biggest Design Scams (bjE6HYuEA1k), captions read 2026-11-01 in the maintainer's Edge test: the AnyDesk read (6:10 to 7:51) and the Theranos story that was wrongly marked as a second sponsor (14:54 to 16:39). Only these two windows are kept.",
+ "anydesk": {
+  "lines": [
+   {
+    "t": 370,
+    "text": "companies take scamming so seriously,"
+   },
+   {
+    "t": 372,
+    "text": "they change how their product works."
+   },
+   {
+    "t": 375,
+    "text": "AnyDesk, who's sponsoring this video, is"
+   },
+   {
+    "t": 376,
+    "text": "one example. Matt, who leads their brand"
+   },
+   {
+    "t": 379,
+    "text": "and fraud prevention, was telling me"
+   },
+   {
+    "t": 380,
+    "text": "about the work they do to keep their"
+   },
+   {
+    "t": 381,
+    "text": "users safe. And a lot of it comes down"
+   },
+   {
+    "t": 384,
+    "text": "to clever interaction design. Look at"
+   },
+   {
+    "t": 386,
+    "text": "this illustration. It explains remote"
+   },
+   {
+    "t": 389,
+    "text": "access through something familiar. It's"
+   },
+   {
+    "t": 391,
+    "text": "like handing someone your house keys. If"
+   },
+   {
+    "t": 393,
+    "text": "you give someone your AnyDesk access"
+   },
+   {
+    "t": 395,
+    "text": "code, you're giving them access to"
+   },
+   {
+    "t": 396,
+    "text": "something private, and you need to"
+   },
+   {
+    "t": 397,
+    "text": "understand what that means."
+   },
+   {
+    "t": 400,
+    "text": "And in this version, rather than"
+   },
+   {
+    "t": 401,
+    "text": "checking a box, they make you type \"I"
+   },
+   {
+    "t": 403,
+    "text": "read this\" before accepting. It's an"
+   },
+   {
+    "t": 405,
+    "text": "extra step designed to make you pause"
+   },
+   {
+    "t": 407,
+    "text": "when someone might be rushing you"
+   },
+   {
+    "t": 408,
+    "text": "through the process of a scam."
+   },
+   {
+    "t": 411,
+    "text": "As designers, we're usually trying to"
+   },
+   {
+    "t": 412,
+    "text": "remove friction from a user experience,"
+   },
+   {
+    "t": 415,
+    "text": "but in this case, it keeps the users"
+   },
+   {
+    "t": 417,
+    "text": "safe from scammers. Of course, remote"
+   },
+   {
+    "t": 420,
+    "text": "access is also incredibly useful for"
+   },
+   {
+    "t": 422,
+    "text": "real work. If you're a designer,"
+   },
+   {
+    "t": 424,
+    "text": "creative, engineer, or editor working"
+   },
+   {
+    "t": 426,
+    "text": "across multiple devices, AnyDesk might"
+   },
+   {
+    "t": 428,
+    "text": "be the best tool you're not using yet. I"
+   },
+   {
+    "t": 431,
+    "text": "use AnyDesk to access my office editing"
+   },
+   {
+    "t": 433,
+    "text": "rig from my laptop. I can work on videos"
+   },
+   {
+    "t": 436,
+    "text": "and hear the audio while the software"
+   },
+   {
+    "t": 437,
+    "text": "runs on my office machine, or I can edit"
+   },
+   {
+    "t": 440,
+    "text": "3D models from anywhere. I can also"
+   },
+   {
+    "t": 442,
+    "text": "transfer footage and project files"
+   },
+   {
+    "t": 444,
+    "text": "between devices without uploading"
+   },
+   {
+    "t": 446,
+    "text": "everything to the cloud first. For"
+   },
+   {
+    "t": 448,
+    "text": "designers, editors, and creatives whose"
+   },
+   {
+    "t": 450,
+    "text": "work lives on a powerful computer back"
+   },
+   {
+    "t": 452,
+    "text": "at the office, that means more"
+   },
+   {
+    "t": 454,
+    "text": "flexibility about where you work. Check"
+   },
+   {
+    "t": 456,
+    "text": "out AnyDesk through my link in the"
+   },
+   {
+    "t": 458,
+    "text": "description below. Back to the video."
+   },
+   {
+    "t": 463,
+    "text": "There's something even more dangerous"
+   },
+   {
+    "t": 464,
+    "text": "and persuasive than a convincing prop,"
+   },
+   {
+    "t": 466,
+    "text": "an entire fantasy. Scammers build an"
+   },
+   {
+    "t": 469,
+    "text": "entire world and sell you a place inside"
+   }
+  ]
+ },
+ "theranos": {
+  "lines": [
+   {
+    "t": 894,
+    "text": "environment around herself. This might"
+   },
+   {
+    "t": 896,
+    "text": "be the part people underestimate the"
+   },
+   {
+    "t": 898,
+    "text": "most. Something as serious as a blood"
+   },
+   {
+    "t": 900,
+    "text": "test has to feel like institutional"
+   },
+   {
+    "t": 901,
+    "text": "healthcare rather than a startup"
+   },
+   {
+    "t": 903,
+    "text": "experiment. So, Theranos partnered with"
+   },
+   {
+    "t": 906,
+    "text": "Walgreens and opened Theranos wellness"
+   },
+   {
+    "t": 907,
+    "text": "centers inside 41 of its stores. Then,"
+   },
+   {
+    "t": 910,
+    "text": "there's her office building. Her own"
+   },
+   {
+    "t": 912,
+    "text": "office was designed to look like the"
+   },
+   {
+    "t": 914,
+    "text": "Oval Office of the United States with a"
+   },
+   {
+    "t": 916,
+    "text": "custom desk as deep as the president's"
+   },
+   {
+    "t": 918,
+    "text": "and two sofas and two armchairs arranged"
+   },
+   {
+    "t": 920,
+    "text": "in the White House layout. She insisted"
+   },
+   {
+    "t": 922,
+    "text": "that the windows to her office had to be"
+   },
+   {
+    "t": 924,
+    "text": "bulletproof glass as well. Investors"
+   },
+   {
+    "t": 926,
+    "text": "visiting the office were escorted by"
+   },
+   {
+    "t": 928,
+    "text": "security guards. There were strict"
+   },
+   {
+    "t": 930,
+    "text": "confidentiality procedures and large"
+   },
+   {
+    "t": 932,
+    "text": "parts of the building were off-limits."
+   },
+   {
+    "t": 934,
+    "text": "All of this insane security made"
+   },
+   {
+    "t": 936,
+    "text": "investors think that Theranos must have"
+   },
+   {
+    "t": 937,
+    "text": "valuable technology worth protecting."
+   },
+   {
+    "t": 940,
+    "text": ">> Can you tell us a secret?"
+   },
+   {
+    "t": 947,
+    "text": ">> I don't have many secrets. I'm"
+   },
+   {
+    "t": 949,
+    "text": ">> When an investor visited headquarters,"
+   },
+   {
+    "t": 951,
+    "text": "employees would get their blood sample"
+   },
+   {
+    "t": 953,
+    "text": "and put it in a Theranos machine. But"
+   },
+   {
+    "t": 954,
+    "text": "once the visitor left the room, they"
+   },
+   {
+    "t": 956,
+    "text": "quickly pull it out of the Theranos"
+   },
+   {
+    "t": 958,
+    "text": "machine and put the blood in a"
+   },
+   {
+    "t": 959,
+    "text": "competitor's machine that actually"
+   },
+   {
+    "t": 961,
+    "text": "function properly. And surrounding all"
+   },
+   {
+    "t": 963,
+    "text": "of this was a board of directors that"
+   },
+   {
+    "t": 965,
+    "text": "included former secretaries of state and"
+   },
+   {
+    "t": 967,
+    "text": "former defense secretaries. Two former"
+   },
+   {
+    "t": 970,
+    "text": "senators were in there, too. Plus, there"
+   },
+   {
+    "t": 972,
+    "text": "were investors like Rupert Murdoch and"
+   },
+   {
+    "t": 973,
+    "text": "the Walton family. Now, look at how all"
+   },
+   {
+    "t": 975,
+    "text": "these pieces work together. The maintainer"
+   },
+   {
+    "t": 977,
+    "text": "looks like Steve Jobs, so maybe she's a"
+   },
+   {
+    "t": 979,
+    "text": "genius. The machine looks like Apple, so"
+   },
+   {
+    "t": 982,
+    "text": "maybe the technology is revolutionary."
+   },
+   {
+    "t": 984,
+    "text": "The company has famous board members and"
+   },
+   {
+    "t": 986,
+    "text": "it's partnered with Walgreens, so surely"
+   },
+   {
+    "t": 988,
+    "text": "somebody must have checked the science"
+   },
+   {
+    "t": 989,
+    "text": "works, right? Every part of the company"
+   },
+   {
+    "t": 992,
+    "text": "makes the other parts feel more"
+   },
+   {
+    "t": 993,
+    "text": "believable. Having an ambitious vision"
+   },
+   {
+    "t": 996,
+    "text": "means believing in something that"
+   },
+   {
+    "t": 997,
+    "text": "doesn't exist yet. So, when does it"
+   },
+   {
+    "t": 999,
+    "text": "become a delusion? Here's a story about"
+   }
+  ]
+ }
+}

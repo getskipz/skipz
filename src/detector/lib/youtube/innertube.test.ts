@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { captionTracks, pickTrack, json3Url, parseJson3, commentsToken, parseComments, findAll, videoIdOf } from './innertube';
+import { captionTracks, pickTrack, json3Url, parseJson3, commentsToken, nextCommentsToken, parseComments, findAll, videoIdOf } from './innertube';
 
 // Shapes copied from what the maintainer's real Chrome answered on 2026-10-08 (the /player track list: six tracks for the test video; the json3 caption file: 61 events; the comments answer: 20 comment
 // entities with commentId, content.content, author.displayName, toolbar.likeCountNotliked, publishedTime).
@@ -50,6 +50,21 @@ describe('the comments token in the answer to /next', () => {
     expect(commentsToken(next)).toBe('COMMENT_TOKEN');
     expect(commentsToken({ itemSectionRenderer: { sectionIdentifier: 'related', contents: [{ continuationCommand: { token: 'x' } }] } })).toBeNull();
     expect(commentsToken(null)).toBeNull();
+  });
+});
+
+describe('the next page of comments', () => {
+  const thread = (withReplies: boolean) => ({ commentThreadRenderer: { commentViewModel: { commentViewModel: { commentId: 'A' } }, ...(withReplies ? { replies: { commentRepliesRenderer: { contents: [{ continuationItemRenderer: { continuationEndpoint: { continuationCommand: { token: 'REPLIES_TOKEN' } } } }] } } } : {}) } });
+  const more = { continuationItemRenderer: { continuationEndpoint: { continuationCommand: { token: 'NEXT_PAGE' } } } };
+  it('is the continuation that closes the list of threads, not the one inside a thread for its replies', () => {
+    const j = { onResponseReceivedEndpoints: [{ appendContinuationItemsAction: { continuationItems: [thread(true), thread(true), more] } }] };
+    expect(nextCommentsToken(j)).toBe('NEXT_PAGE');
+  });
+  it('is nothing on the last page, even when a thread there has replies to load', () => {
+    const j = { onResponseReceivedEndpoints: [{ appendContinuationItemsAction: { continuationItems: [thread(false), thread(true)] } }] };
+    expect(nextCommentsToken(j)).toBeNull();
+    expect(nextCommentsToken(null)).toBeNull();
+    expect(nextCommentsToken({ nothing: 1 })).toBeNull();
   });
 });
 

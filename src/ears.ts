@@ -14,7 +14,7 @@ export type EarsMsg =
   | { type: 'ears:probe'; b64: string; brand: string | null }
   | { type: 'ears:needle'; candidates: string[]; paid: boolean; all: string }
   | { type: 'ears:forget'; videoId: string };
-export type HeardReply = { live: Live | null; text: string };
+export type HeardReply = { live: Live | null; text: string; ms: number }; // ms: how long the first ear took on this slice (read by the speed check)
 export type ProbeReply = { ad: boolean | null; text: string };
 
 const say = (m: unknown) => { void chrome.runtime.sendMessage(m).catch(() => { /* nobody is showing the progress */ }); };
@@ -76,7 +76,7 @@ async function heard(m: Extract<EarsMsg, { type: 'ears:heard' }>, tab: number | 
   }
   const out = s.live ? { ...s.live } : null;
   if (s.live?.ended) { s.live = null; s.slices = []; s.pcm = []; } // an ad that has ended is reported once; the next one is looked for from fresh words
-  return { live: out, text: w.text };
+  return { live: out, text: w.text, ms: w.ms };
 }
 
 chrome.runtime.onMessage.addListener((msg: EarsMsg, sender, reply) => {

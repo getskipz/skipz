@@ -138,7 +138,8 @@ async function callText(tabId: number, url: string): Promise<{ ok: true; text: s
 let pausedUntil = 0;
 const HOUR = 3600000;
 export const quietRoutePaused = (now = Date.now()) => now < pausedUntil;
-export const pauseQuietRoute = (ms = 2 * HOUR, now = Date.now()) => { pausedUntil = now + ms; };
+// 30 minutes (was 2 hours until 2026-10-24): with YouTube's transcript panel gone for good, a long pause left a whole session without captions after one refusal.
+export const pauseQuietRoute = (ms = HOUR / 2, now = Date.now()) => { pausedUntil = now + ms; };
 export const _resetQuietRoute = () => { pausedUntil = 0; };
 
 export async function transcriptViaPage(tabId: number, videoId: string, prefer = 'en'): Promise<ItTranscript> {
@@ -167,6 +168,27 @@ export function commentsToken(next: unknown): string | null {
   for (const sec of findAll(next, 'itemSectionRenderer')) {
     if (sec.sectionIdentifier !== 'comment-item-section') continue;
     for (const c of findAll(sec, 'continuationCommand')) if (typeof c.token === 'string' && c.token) return c.token;
+  }
+  return null;
+}
+
+/** The token that loads the NEXT page of comments: the continuation that closes the list of threads (a thread's own "replies" continuation sits inside the thread and is not it). Null on the last page. */
+export function nextCommentsToken(json: unknown): string | null {
+  const lists: unknown[][] = [];
+  const walk = (n: unknown, d = 0) => {
+    if (d > 60 || n === null || typeof n !== 'object') return;
+    if (Array.isArray(n)) { for (const x of n) walk(x, d + 1); return; }
+    const o = n as Obj;
+    if (Array.isArray(o.continuationItems)) lists.push(o.continuationItems);
+    for (const k of Object.keys(o)) walk(o[k], d + 1);
+  };
+  walk(json);
+  for (const items of lists) {
+    if (!items.some((i) => isObj(i) && 'commentThreadRenderer' in i)) continue;
+    const last = items[items.length - 1];
+    if (!isObj(last) || !isObj(last.continuationItemRenderer)) continue;
+    const tok = findAll(last, 'continuationCommand')[0]?.token;
+    if (typeof tok === 'string' && tok) return tok;
   }
   return null;
 }
@@ -209,15 +231,25 @@ export function parseComments(json: unknown, max = 20): { total: number | null; 
 export type ItComments = { ok: true; total: number | null; comments: ItComment[] } | { ok: false; why: string };
 
 /** A video's top comments through YouTube's page interface (no scrolling the page). ok:false = use the on-screen reader instead. */
-export async function commentsViaPage(tabId: number, videoId: string, max = 20): Promise<ItComments> {
+// `pages` is how many pages of comments to read (each is about 20, in YouTube's "top" order): the comment check looks through up to 3 for the times viewers post. Any refusal pauses the whole quiet route, the same breaker the transcript uses.
+export async function commentsViaPage(tabId: number, videoId: string, max = 20, pages = 1): Promise<ItComments> {
+  if (quietRoutePaused()) return { ok: false, why: 'The quiet route is paused: YouTube refused it a moment ago.' };
+  const refuse = (r: { status?: number }) => { if (r.status === 429 || r.status === 403) pauseQuietRoute(); };
   const next = await callIt(tabId, 'next', { videoId });
-  if (!next.ok) return { ok: false, why: next.why };
-  const token = commentsToken(next.json);
+  if (!next.ok) { refuse(next); return { ok: false, why: next.why }; }
+  let token = commentsToken(next.json);
   if (!token) return { ok: false, why: 'No comments section in the answer.' };
-  const got = await callIt(tabId, 'next', { continuation: token });
-  if (!got.ok) return { ok: false, why: got.why };
-  const r = parseComments(got.json, max);
-  return r.comments.length ? { ok: true, total: r.total, comments: r.comments } : { ok: false, why: 'The comments came back in a shape Skipz does not read.' };
+  const all: ItComment[] = [];
+  let total: number | null = null;
+  for (let p = 0; p < Math.max(1, pages) && token && all.length < max; p++) {
+    const got = await callIt(tabId, 'next', { continuation: token });
+    if (!got.ok) { refuse(got); if (!all.length) return { ok: false, why: got.why }; break; } // a later page failing keeps what was read
+    const r = parseComments(got.json, max - all.length);
+    if (p === 0) total = r.total;
+    all.push(...r.comments);
+    token = nextCommentsToken(got.json);
+  }
+  return all.length ? { ok: true, total, comments: all } : { ok: false, why: 'The comments came back in a shape Skipz does not read.' };
 }
 
 // ---- related channels: who else the page lists beside a video ------------------------------------------------------------

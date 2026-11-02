@@ -227,11 +227,14 @@ async function grab(): Promise<TxResult> {
 
 // First YouTube's own page interface (innertube.ts: two calls, no panel opened, nothing shown on your page), and only if that gives no lines, the on-screen reader below
 // (maintainer, 2026-10-08: "let what you've built be a fallback"). A video id is needed for the first route.
-export async function readTranscript(tabId: number, videoId?: string | null): Promise<TranscriptRead> {
+// NEVER YouTube's own transcript panel (maintainer, 2026-10-24: "I don't ever want to see this transcript again", after the "In this video" panel showed beside a video): the on-screen reader below is off unless a caller
+// passes `panel: true` (only Skipz's own test tools do). No lines from the quiet route simply means "no captions", and the listening / the other checks carry on without them.
+export async function readTranscript(tabId: number, videoId?: string | null, opts: { panel?: boolean } = {}): Promise<TranscriptRead> {
   if (videoId) {
     const via = await transcriptViaPage(tabId, videoId);
     if (via.state === 'ok') return { state: 'ok', lines: via.lines.map((l) => ({ t: l.t, text: l.text })) };
-  }
+    if (opts.panel !== true) return via.state === 'none' ? { state: 'none' } : { state: 'timeout', why: via.why };
+  } else if (opts.panel !== true) return { state: 'timeout', why: 'no video id' };
   try {
     const [res] = await chrome.scripting.executeScript({ target: { tabId }, world: 'MAIN', func: grabTranscript });
     const r = res?.result as { state: string; lines?: TranscriptLine[]; why?: string } | undefined;
