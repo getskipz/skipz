@@ -602,3 +602,17 @@ describe('"partnered with" is a cue only when the creator or the video is the on
     expect(CUE.test("AnyDesk, who's sponsoring this video, is")).toBe(true);
   });
 });
+
+describe('a chapter the creator named "Sponsor" is the creator marking the ad (real: Rf0BrQo-qAY 0:00 to 0:17 and pO5ynxYzZPU "Sponsor message" 11:22 to 12:32, 2026-11-04)', () => {
+  it('counts as sure as a chapter that names the brand', () => {
+    for (const title of ['Sponsor', 'Sponsor message', 'Sponsored segment', 'Ad read']) {
+      const v = byChapters([{ title: 'Intro', startSeconds: 0 }, { title, startSeconds: 60 }, { title: 'Main', startSeconds: 120 }], [], 600);
+      expect(v).toMatchObject({ said: 'yes', start: 60, end: 120, score: 0.75 });
+    }
+  });
+  it('stays less sure for the looser words, and ignores "Sponsors" as a topic', () => {
+    expect(byChapters([{ title: 'Partner programme', startSeconds: 30 }, { title: 'Next', startSeconds: 90 }], [], 600).score).toBe(0.6);
+    expect(byChapters([{ title: 'Advert breaks explained', startSeconds: 30 }, { title: 'Next', startSeconds: 90 }], [], 600).score).toBe(0.6);
+    expect(byChapters([{ title: 'Our sponsors this year', startSeconds: 30 }], [], 600).said).toBe('unknown');
+  });
+});

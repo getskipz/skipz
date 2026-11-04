@@ -30,6 +30,8 @@ const SAID = [
   // "Paid partnership with Ridge" (the ad-signal list, maintainer 2026-10-05).
   /\b(?:[Pp]aid\s+(?:[Pp]artnership|[Pp]romotion)|PAID\s+(?:PARTNERSHIP|PROMOTION))\s+(?:with|WITH|for|FOR|from|FROM)\s+([A-Z][\w&'-]*(?:\s+[A-Z][\w&'-]*){0,2})/,
 ];
+// The plain statements that the video is sponsored are read wherever they sit in the description, not only near the top (real, 2026-11-04: "Thank you to Vidu for sponsoring this video." was line 12, "This video is sponsored by Fish Audio." line 10). Looser ones (supporting, partnering, presented by, a link with a code) stay top-of-description only: a footer thanking fans or Patreon must not read as a sponsor.
+const SAID_LOW = [SAID[0], SAID[1], /\bthanks? (?:you )?to\s+([A-Z][\w&'-]*(?:\s+[A-Z][\w&'-]*){0,2})\s+for\s+sponsoring/i, SAID[4]];
 // Words that make a line with a link look like an ad read (not just "my Instagram").
 // ("Get $20 in credits": Fireship's real Exa line, 2026-09-29.)
 // A personal code at a brand's checkout is a deal, even without YouTube's label (CODE and OWN_HOSTS now live in door.ts, which reads the same lines).
@@ -51,7 +53,8 @@ const isOwn = (host: string) => { const h = host.toLowerCase(); return OWN_HOSTS
 export function sponsorFromText(description: string | null | undefined): TextSponsor | null {
   if (!description) return null;
   // Quotation marks come out first: DOWNLOAD "JUST PRAY" APP NOW! (The Orthodox Muslim 2.0, maintainer's screenshot 2026-10-14) was missed because the quote hid the app's name.
-  const lines = description.split(/\n+/).map((l) => l.trim().replace(/["“”]/g, '')).filter(Boolean).slice(0, 6);
+  const all = description.split(/\n+/).map((l) => l.trim().replace(/["“”]/g, '')).filter(Boolean);
+  const lines = all.slice(0, 6);
   for (const line of lines) {
     for (const re of SAID) {
       const m = line.match(re);
@@ -90,6 +93,12 @@ export function sponsorFromText(description: string | null | undefined): TextSpo
     const shown = writtenWord && /[A-Z]/.test(writtenWord) ? writtenWord : name.charAt(0).toUpperCase() + name.slice(1);
     const brand = !/[a-z]/.test(shown) && shown.length > 4 ? shown.toLowerCase().replace(/\b[a-z]/g, (c) => c.toUpperCase()) : shown; // "JUST PRAY" -> "Just Pray"
     return { brand, line: clip(line), how: CODE.test(line) ? 'code' : 'link', site: url[1].toLowerCase().replace(/^www\./, ''), door: doorWord(doorOfLine(line)) };
+  }
+  for (const line of all.slice(6, 80)) {
+    for (const re of SAID_LOW) {
+      const m = line.match(re);
+      if (m) return { brand: tidy(m[1]), line: clip(line), how: 'said', site: siteOf(line), door: doorWord(doorOfLine(line)) };
+    }
   }
   return null;
 }

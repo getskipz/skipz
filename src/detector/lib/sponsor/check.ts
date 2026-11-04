@@ -84,7 +84,9 @@ export function byChapters(chapters: { title: string; startSeconds: number }[], 
   const c = chapters[i];
   const end = chapters[i + 1]?.startSeconds ?? length ?? null;
   const brand = named(c.title) ?? null;
-  return { method: 'chapters', said: 'yes', brand, start: c.startSeconds, end, score: brand ? 0.75 : 0.6, proof: 'Chapter “' + c.title + '” at ' + clock(c.startSeconds) };
+  // A chapter the creator titled "Sponsor" / "Sponsor message" / "Ad read" is the creator marking the ad: as sure as one that names the brand (real, 2026-11-04: Rf0BrQo-qAY, pO5ynxYzZPU). "Partner" and "advert" stay less sure.
+  const marked = /\b(sponsor|sponsored|ad read)\b/i.test(c.title);
+  return { method: 'chapters', said: 'yes', brand, start: c.startSeconds, end, score: brand || marked ? 0.75 : 0.6, proof: 'Chapter “' + c.title + '” at ' + clock(c.startSeconds) };
 }
 
 // Viewers often post the ad's time ("4:31 skip the sponsor"). Times near ad words, the most repeated wins.
