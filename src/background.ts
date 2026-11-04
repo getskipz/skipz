@@ -16,6 +16,7 @@ import { askIndex, sendFinding, INDEX_URL } from './sharedList';
 import { isLocalCopy, readBuildId } from '@detector/lib/autoUpdate';
 import { offerLink } from './offerLink';
 import { crowdFor, withCrowd } from './crowd';
+import { settle } from './settle';
 
 // capText: the caption file the page script already fetched (at the very start of the page load, before YouTube's scripts get busy); capMs/capWhy: how that went
 export type Ask = { type: 'check'; videoId: string; url: string; capText?: string | null; capMs?: number; capWhy?: string; capVia?: string; capText2?: string | null; force?: boolean }; // capText2: the player's other caption track (Capture); force: look again with it, ignoring the saved answer
@@ -123,7 +124,7 @@ async function check(tabId: number, ask: Ask): Promise<Answer> {
   const link = offerLink(page.video.description, v.brand, v.site); // the channel's own link for this sponsor, if the description has one (maintainer, 2026-11-02)
   const detected = decided.mark ? { ...decided.mark, ...(link ? { link } : {}) } : null;
   // The crowd's marks are folded in AFTER the detector decided (and what is sent to the Index below is the detector's verdict only, never the crowd's).
-  const mark = withCrowd(detected, await crowdP, v.brand ?? null, ask.videoId);
+  const mark = settle(prev?.mark, withCrowd(detected, await crowdP, v.brand ?? null, ask.videoId)); // an answer already made stands: a later look can make it surer, never move or remove it (settle.ts)
   const probable = decided.probable;
   // Only the misses are kept (maintainer, 2026-11-01): sure there is a sponsor, but not placed, or placed only by a best guess. Kept on this computer; the popup can save them to a file.
   if (v.sponsored && !mark) void keepMiss({ videoId: ask.videoId, title: page.video.title ?? null, channel: page.channel?.name ?? null, lengthSeconds: page.video.lengthSeconds ?? null, paid: !!page.video.paidPromotion, description: (page.video.description ?? '').slice(0, 3000), chapters: page.video.chapters ?? [], captionLines: captions.state === 'ok' ? captions.lines : null, brand: v.brand, confidence: v.confidence, why: !mark ? 'found, not placed' : 'placed by the words of the description (' + probable + ')', at: new Date().toISOString(), version: chrome.runtime.getManifest().version });

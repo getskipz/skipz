@@ -9,6 +9,30 @@ const burstsOfMark = (m: Mark): Burst[] => [{ start: m.start, end: m.end }, ...(
   if (hit) { hit.start = Math.min(hit.start, b.start); hit.end = Math.max(hit.end, b.end); } else out.push({ ...b });
   return out;
 }, []);
+// A copy of src/settle.ts (this script cannot import a file the worker also uses; settle.test.ts fails if the copies differ). An answer once made does not change its mind.
+// settle:begin
+const spans = (m: Mark): Burst[] => [{ start: m.start, end: m.end }, ...(m.more ?? [])];
+
+const overlaps = (a: Burst, b: Burst): boolean => a.start <= b.end && a.end >= b.start; // the same ad only when the stretches really overlap (as crowd.ts judges it): one that ends 2 seconds before the other begins is a different place
+
+function settle(prev: Mark | null | undefined, next: Mark | null | undefined): Mark | null {
+  if (!prev) return next ?? null;
+  if (!next || next === prev) return prev;
+  if (prev.videoId !== next.videoId) return next;
+  if (prev.from === 'heard') {
+    const mine = spans(next);
+    const apart = spans(prev).filter((b) => !mine.some((o) => overlaps(o, b)));
+    if (!apart.length) return next;
+    const more = [...(next.more ?? []), ...apart].sort((a, b) => a.start - b.start).slice(0, 4);
+    return { ...next, more };
+  }
+  const agrees = spans(next).some((b) => spans(prev).some((p) => overlaps(p, b)));
+  if (!agrees) return prev;
+  const brand = prev.brand === 'Sponsor' && next.brand !== 'Sponsor' ? next.brand : prev.brand;
+  const confidence = Math.max(prev.confidence, next.confidence);
+  return brand === prev.brand && confidence === prev.confidence ? prev : { ...prev, brand, confidence };
+}
+// settle:end
 
 // A bookmark after "Support me" that saves the sponsor to look at later (maintainer, 2026-10-22: "hide for now, it'll be used in the future"). Built but OFF: the build turns it on with SKIPZ_SAVE=1.
 declare const __SAVE__: boolean;
@@ -461,7 +485,7 @@ async function captureSecond(id: string, used: string | null) {
   try {
     const a = await chrome.runtime.sendMessage({ type: 'check', videoId: id, url: location.href, capText: used ?? mine[0]?.body ?? null, capText2: used ? other.body : mine.length > 1 ? mine[mine.length - 1].body : null, force: true, capVia: 'player' } satisfies Ask) as Answer | undefined;
     if (idOf() !== id || !a?.mark || mark?.from === 'heard') return;
-    mode = a.mode; mark = a.mark; bursts = burstsOfMark(a.mark);
+    mode = a.mode; mark = settle(mark, a.mark); bursts = mark ? burstsOfMark(mark) : bursts; // the second caption track may confirm the mark, never replace it (settle.ts)
     drawWhenReady();
   } catch { /* the extension was reloaded */ }
 }
@@ -507,7 +531,7 @@ async function open(again = false, force = false) {
     const a: Answer | undefined = await chrome.runtime.sendMessage(msg);
     trail({ video: id, capVia: early.via, capMs: early.ms, capWhy: early.why, answeredAfterMs: Date.now() - asked, marked: !!a?.mark, retry: !!a?.retry, mode: a?.mode, noCaptions: a?.noCaptions, listen: a?.listen, debug: a?.debug ?? null });
     if (idOf() !== id || !a) return; // the person moved on
-    mode = a.mode; mark = a.mark; bursts = a.mark ? burstsOfMark(a.mark) : [];
+    mode = a.mode; mark = settle(mark, a.mark); bursts = mark ? burstsOfMark(mark) : []; // a retry never un-marks or moves what is already drawn (settle.ts)
     // The speed check (maintainer, 2026-11-01): was the mark found before the sponsor began? Counted once per video, the first time a mark is shown.
     if (a.mark && !lateChecked.has(id)) { lateChecked.add(id); const pv = video(); if (pv && bursts.some((b) => pv.currentTime >= b.start && pv.currentTime < b.end - 1)) stat('late'); }
     if (a.retry && retriesLeft-- > 0) retryTimer = window.setTimeout(() => { if (idOf() === id) void open(true); }, 13000); // the first reading was incomplete: look again in a moment (a few times)
