@@ -16,19 +16,20 @@ It works on videos nobody has marked yet, including ones posted an hour ago. It 
 
 ## How it decides
 
-Skipz combines four signs and marks a sponsor only when it is sure enough:
+Skipz combines these signs and marks a sponsor only when it is sure enough:
 
 1. YouTube's own "includes paid promotion" label.
 2. Sponsor lines and links in the description.
 3. Chapters named after a brand.
 4. Spoken ad reads in the video's captions ("this video is sponsored by …", a deal code, "link in the description").
 5. No captions? If you agree, Skipz listens to the video on your computer with two small speech models and catches the sponsor read as it starts. It can then skip the rest of the read, one short jump at a time, and Undo takes you back.
+6. The marks other viewers made on [SponsorBlock](https://sponsor.ajay.app), a free community project. Where viewers saw the ad, Skipz uses their times.
 
 The rules are plain text patterns and a few thresholds. You can read them in [`src/detector/lib/sponsor/`](src/detector/lib/sponsor/). [How it works](docs/HOW-IT-WORKS.md) walks through one video.
 
 ## Privacy
 
-Skipz asks Chrome for four things: `storage` (your mode and counters), `scripting` (to read the page you have open), `offscreen` (a hidden page that runs the listening models) and access to `youtube.com`. It sends nothing about you or what you watch anywhere. [Details](docs/PRIVACY.md).
+Skipz asks Chrome for four things: `storage` (your mode and counters), `scripting` (to read the page you have open), `offscreen` (a hidden page that runs the listening models) and access to `youtube.com`. It sends nothing about you. For each video it asks SponsorBlock for the community's marks, and the question carries only the first four characters of a scrambled copy of the video's id, so SponsorBlock cannot tell what you watch. [Details](docs/PRIVACY.md).
 
 ## Install
 
@@ -68,5 +69,7 @@ Skipz is run by one person for now: Yx. I read every report. Replies can take a 
 [GNU General Public License, version 3 or later](LICENSE). Skipz is free to use, change and share under that licence: if you share a changed copy, you share its source under the same licence. The name Skipz and its logo are not part of the licence.
 
 **Commercial licence.** If you want to use Skipz's code in a product that you do not want to release under the GPL, a separate commercial licence is available. Open an issue on this repository titled “Commercial licence”, say in a line how you would use Skipz and how to reach you, and I will reply. Please keep private details out of the issue.
+
+The SponsorBlock data Skipz reads is made by its contributors under [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/) and is not covered by this licence or the commercial one.
 
 Skipz is not affiliated with or endorsed by YouTube or Google.

@@ -66,7 +66,7 @@ export function brandStretches(lines: Line[], brand: string): Burst[] {
 
 /** What Skipz shows on the player: a brand and a time range, only when it is sure enough to point at one. */
 export type Burst = { start: number; end: number };
-export type Mark = { videoId: string; brand: string; start: number; end: number; confidence: number; from: 'index' | 'page' | 'heard'; live?: boolean; more?: Burst[]; link?: string }; // start/end: the main burst; more: the others (a short plug up front, say)
+export type Mark = { videoId: string; brand: string; start: number; end: number; confidence: number; from: 'index' | 'page' | 'heard' | 'crowd'; live?: boolean; more?: Burst[]; link?: string }; // start/end: the main burst; more: the others (a short plug up front, say)
 /** Every burst of a mark, the main one first. */
 // The main burst first, then the others; bursts that overlap (a short plug up front inside the main read) are drawn as one.
 export const burstsOfMark = (m: Mark): Burst[] => [{ start: m.start, end: m.end }, ...(m.more ?? [])].reduce<Burst[]>((out, b) => {

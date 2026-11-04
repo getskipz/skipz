@@ -1,10 +1,13 @@
 # Privacy
 
-**Skipz sends nothing about you or what you watch anywhere. It has no server, no account, no analytics and no tracking, and it does not ask for a key. The only thing it ever fetches is two small listening models, once, and only if you say yes (see "Listening" below).**
+**Skipz has no server, no account, no analytics and no tracking, and it does not ask for a key. It sends nothing about you. For each video you open it asks SponsorBlock whether viewers marked a sponsor there (see "SponsorBlock" below). The only other thing it fetches is two small listening models, once, and only if you say yes (see "Listening" below).**
 
 ## What it reads
 
 On a YouTube video page only: the paid-promotion label, the description, the chapters and the video's own captions. It reads them in your browser to decide whether to mark a sponsor.
+
+## SponsorBlock
+For each video you open, Skipz asks sponsor.ajay.app, the SponsorBlock community's server, for the marks viewers made. The question carries only the first four characters of a scrambled (SHA-256) copy of the video's id. SponsorBlock answers with every marked video that shares those four characters, and Skipz picks out yours, so SponsorBlock cannot tell which video you are watching. Nothing else is sent: no account, no cookies, no key. If SponsorBlock cannot be reached in a couple of seconds, Skipz goes on without it.
 
 ## Listening
 When a video has no captions Skipz can read, it asks once whether it may listen instead. If you say yes, it downloads two small speech models from a public model library (huggingface.co), once. After that it hears the sound of the video you are watching, five seconds at a time, in a page of the extension on your own computer, turns it into words, and drops the sound. Nothing is recorded, stored or sent. You can switch listening off any time in the Skipz popup.
