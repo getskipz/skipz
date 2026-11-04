@@ -31,5 +31,6 @@ export type VideoFacts = {
   sponsorAt?: number | null; // where the sponsor's ad starts, in seconds (its chapter), when known
   sponsorDoor?: string | null; // the door word for that sponsor's link (see lib/door.ts); null = not checked
   sponsorEnd?: number | null;
+  sponsorFrom?: 'description' | 'check' | null; // where the NAME came from: the description's first lines, or Skipz's check of the video (label, chapters, what was said). Read only; never written.
   source: Source;
 };
