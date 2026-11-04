@@ -64,23 +64,25 @@ describe('folding the crowd into the detector’s mark', () => {
     expect(withCrowd(m, [], 'Surfshark', m.videoId)).toBe(m);
     expect(withCrowd(null, [], null, 'x')).toBeNull();
   });
-  it('fixes the time where the detector found the same ad: the crowd saw it there', () => {
-    const got = withCrowd(mark(), crowd([118, 197]), 'Surfshark', 'abc123DEF45')!;
-    expect(got).toMatchObject({ brand: 'Surfshark', start: 118, end: 197, from: 'crowd' });
-    expect(got.confidence).toBeGreaterThanOrEqual(0.85);
-    expect(got.more).toBeUndefined();
+  it('confirms where the detector found the same ad and NEVER moves its times (measured: a crowd start a few seconds before the detector’s read took a confirmed answer out of its range)', () => {
+    const m = mark({ confidence: 0.95 });
+    expect(withCrowd(m, crowd([118, 197]), 'Surfshark', m.videoId)).toBe(m); // already surer than a 3-vote part: nothing changes, not even a copy
+    const less = withCrowd(mark({ confidence: 0.72 }), crowd([118, 197]), 'Surfshark', 'abc123DEF45')!;
+    expect(less).toMatchObject({ start: 120, end: 190, from: 'page', confidence: 0.9 }); // times kept, the crowd's agreement raises the confidence
+    expect(less.more).toBeUndefined();
   });
   it('marks the video when the detector found a sponsor but not where, or nothing at all (a locked part is surest)', () => {
     const a = withCrowd(null, crowd([300, 380, { locked: true }]), 'Acme', 'abc123DEF45')!;
     expect(a).toMatchObject({ brand: 'Acme', start: 300, end: 380, from: 'crowd', confidence: 0.95 });
     const b = withCrowd(null, crowd([300, 380, { votes: 1 }]), null, 'abc123DEF45')!;
     expect(b).toMatchObject({ brand: 'Sponsor', confidence: 0.8 });
+    expect(withCrowd(null, crowd([300, 380, { votes: 0 }]), null, 'x')!.confidence).toBe(0.7); // not voted down, but nobody has confirmed it: just sure enough to mark
     expect(withCrowd(null, crowd([300, 380, { votes: 5 }]), null, 'x')!.confidence).toBe(0.9);
   });
   it('adds a second crowd part only when it is as long as a real read, at most four more, and keeps the longest as the main one', () => {
     const got = withCrowd(mark(), crowd([118, 197], [600, 612], [900, 960], [1200, 1260]), 'Surfshark', 'abc123DEF45')!;
     expect(got.more).toEqual([{ start: 900, end: 960 }, { start: 1200, end: 1260 }]); // the 12-second plug is not added
-    expect(got.start).toBe(118);
+    expect(got.start).toBe(120); // the detector's own main part stays exactly where it was
   });
   it('keeps the detector’s own mark, its brand and its link, when the crowd only adds a part elsewhere', () => {
     const got = withCrowd(mark({ link: 'https://surfshark.com/x' }), crowd([900, 960]), 'Surfshark', 'abc123DEF45')!;

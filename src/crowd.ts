@@ -3,7 +3,7 @@
 // returns is never sent to the shared list. It asks the private way: only the first 4 characters of a scrambled (SHA-256) copy of the video id go out, SponsorBlock answers with every marked video sharing them, and the
 // video is picked out here, so SponsorBlock cannot tell which video is being watched. It asks SponsorBlock, not YouTube, so it runs beside the page and caption reads and a slow answer is simply left out.
 // A crowd mark counts as CONFIRMED (viewers saw the ad there): it fixes the time where the detector found the same ad, and marks the video where the detector found a sponsor but not where.
-import { burstsOfMark, MIN_READ, type Burst, type Mark } from './verdict';
+import { MIN_READ, type Burst, type Mark } from './verdict';
 
 export type Crowd = { start: number; end: number; votes: number; locked: boolean };
 const API = 'https://sponsor.ajay.app/api/skipSegments/';
@@ -15,8 +15,8 @@ export async function hashPrefix(videoId: string): Promise<string> {
   return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('').slice(0, 4);
 }
 
-/** This video's marked sponsor parts that viewers did not vote down (locked, or at least one vote up), each 5 to 900 seconds long, in time order. Everything else in the answer is ignored. */
-export function pickCrowd(json: unknown, videoId: string): Crowd[] {
+/** This video's marked sponsor parts that viewers did not vote down (locked, or at least `minVotes` up), each 5 to 900 seconds long, in time order. Everything else in the answer is ignored. */
+export function pickCrowd(json: unknown, videoId: string, minVotes = 1): Crowd[] {
   if (!Array.isArray(json)) return [];
   const mine = json.find((x) => x && typeof x === 'object' && (x as { videoID?: unknown }).videoID === videoId) as { segments?: unknown } | undefined;
   const out: Crowd[] = [];
@@ -28,7 +28,7 @@ export function pickCrowd(json: unknown, videoId: string): Crowd[] {
     const votes = typeof o.votes === 'number' ? o.votes : 0;
     const locked = o.locked === 1 || o.locked === true;
     const len = seg[1] - seg[0];
-    if (len < 5 || len > 900 || seg[0] < 0 || (!locked && votes < 1)) continue;
+    if (len < 5 || len > 900 || seg[0] < 0 || (!locked && votes < minVotes)) continue;
     out.push({ start: Math.round(seg[0]), end: Math.round(seg[1]), votes, locked });
   }
   return out.sort((a, b) => a.start - b.start);
@@ -54,27 +54,27 @@ export async function crowdFor(videoId: string, fetchFn: typeof fetch = fetch, n
   } catch { return []; }
 }
 
-const sure = (c: Crowd): number => (c.locked ? 0.95 : c.votes >= 3 ? 0.9 : 0.8);
+const sure = (c: Crowd): number => (c.locked ? 0.95 : c.votes >= 3 ? 0.9 : c.votes >= 1 ? 0.8 : 0.7);
 const overlaps = (a: Burst, b: Burst): boolean => a.start <= b.end && a.end >= b.start;
 
 /**
- * The mark with the crowd folded in. No crowd: the mark as it was. A crowd part that overlaps a part the detector marked replaces its times (people saw the ad there); a crowd part elsewhere is added when it is as long as a real
- * read (MIN_READ), at most four extra; with no mark at all, the best crowd part becomes the mark (the brand, when the detector knew it, else "Sponsor"). Times are exact, so they are not padded.
+ * The mark with the crowd folded in. The crowd NEVER moves a time the detector already has (measured 2026-11-04 on the maintainer's confirmed answers: replacing the detector's times with the crowd's moved one confirmed start
+ * out of range, the detector's read began at 0:55 and the crowd's part at 0:52; the detector's reading is padded and checked against what the video itself says). It does three things: a crowd part that overlaps a part the
+ * detector marked CONFIRMS it (its confidence rises); a crowd part elsewhere is added when it is as long as a real read (MIN_READ), at most four extra; and with no mark at all (no sponsor found, or one found without a
+ * time) the best crowd part becomes the mark (the brand, when the detector knew it, else "Sponsor"). Times are exact, so they are not padded.
  */
 export function withCrowd(mark: Mark | null, crowd: Crowd[], brand: string | null, videoId: string): Mark | null {
   if (!crowd.length) return mark;
   const best = [...crowd].sort((a, b) => Number(b.locked) - Number(a.locked) || b.votes - a.votes || (b.end - b.start) - (a.end - a.start))[0];
-  const bursts: Burst[] = mark ? burstsOfMark(mark).map((b) => ({ ...b })) : [];
-  let fixed = false;
-  for (const c of crowd) {
-    const hit = bursts.find((b) => overlaps(b, c));
-    if (hit) { hit.start = c.start; hit.end = c.end; fixed = true; }
-    else if (c === best || c.end - c.start >= MIN_READ) bursts.push({ start: c.start, end: c.end });
+  if (mark) {
+    const mine: Burst[] = [{ start: mark.start, end: mark.end }, ...(mark.more ?? [])];
+    const agreed = crowd.filter((c) => mine.some((b) => overlaps(b, c)));
+    const extra = crowd.filter((c) => !agreed.includes(c) && c.end - c.start >= MIN_READ).map((c) => ({ start: c.start, end: c.end }));
+    const confidence = agreed.length ? Math.max(mark.confidence, ...agreed.map(sure)) : mark.confidence;
+    if (!extra.length && confidence === mark.confidence) return mark;
+    const more = [...(mark.more ?? []), ...extra].sort((a, b) => a.start - b.start).slice(0, 4);
+    return { ...mark, confidence, ...(more.length ? { more } : {}) };
   }
-  // two parts that now overlap are one
-  const merged = bursts.sort((a, b) => a.start - b.start).reduce<Burst[]>((out, b) => { const last = out[out.length - 1]; if (last && overlaps(last, b)) last.end = Math.max(last.end, b.end); else out.push({ ...b }); return out; }, []);
-  const main = [...merged].sort((a, b) => (b.end - b.start) - (a.end - a.start))[0];
-  const rest = merged.filter((b) => b !== main).sort((a, b) => a.start - b.start).slice(0, 4);
-  const confidence = Math.max(mark?.confidence ?? 0, sure(best));
-  return { videoId, brand: mark?.brand ?? brand ?? 'Sponsor', start: main.start, end: main.end, confidence, from: mark && !fixed ? mark.from : 'crowd', ...(rest.length ? { more: rest } : {}), ...(mark?.link ? { link: mark.link } : {}) };
+  const rest = crowd.filter((c) => c !== best && c.end - c.start >= MIN_READ).map((c) => ({ start: c.start, end: c.end })).sort((a, b) => a.start - b.start).slice(0, 4);
+  return { videoId, brand: brand ?? 'Sponsor', start: best.start, end: best.end, confidence: sure(best), from: 'crowd', ...(rest.length ? { more: rest } : {}) };
 }
